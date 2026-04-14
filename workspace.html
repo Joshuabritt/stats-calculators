@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brightspace Statistics Workspace</title>
+  <style>
+    :root {
+      --blue1:#1d4ed8;--blue2:#2563eb;--blue3:#60a5fa;--bg:#eef3fb;--card:#ffffff;
+      --line:#d7e2f3;--text:#0f172a;--muted:#475569;--success:#0f766e;--warn:#b45309;
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .app-header{background:linear-gradient(120deg,var(--blue1),var(--blue2),var(--blue3));color:#fff;padding:14px 20px;box-shadow:0 8px 20px rgba(30,64,175,.25)}
+    .title{font-size:1.15rem;font-weight:700;letter-spacing:.2px}
+    .subtitle{opacity:.92;font-size:.9rem;margin-top:2px}
+    .menu-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+    .menu-desc{margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.25);border-radius:10px;font-size:.9rem;max-width:980px}
+    .menu{position:relative}
+    .menu>button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    .menu>button:hover,.menu.open>button{background:rgba(255,255,255,.28)}
+    .dropdown{display:none;position:absolute;top:42px;left:0;min-width:250px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 35px rgba(15,23,42,.18);padding:8px;z-index:20}
+    .menu.open .dropdown{display:block}
+    .dropdown button{display:block;width:100%;text-align:left;border:none;background:none;padding:9px;border-radius:8px;cursor:pointer;color:var(--text)}
+    .dropdown button:hover{background:#eff6ff}
+    .layout{display:grid;grid-template-columns:1fr;gap:12px;padding:14px;min-height:calc(100vh - 140px)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 20px rgba(30,41,59,.08)}
+    .panel-h{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .panel-h h3{margin:0;font-size:1rem}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+    .workspace-card{overflow:hidden}
+    .workspace-body{padding:14px}
+    .data-drawer{border-top:1px solid var(--line);max-height:78vh;overflow:hidden;transition:max-height .25s ease}
+    .data-drawer.closed{max-height:0;border-top:none}
+    .history-panel{margin-top:10px}
+    .sheet-context{padding:10px 12px;border-bottom:1px solid var(--line);display:grid;gap:10px;background:#f8fbff}
+    .quick-actions,.dataset-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .summary-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .mini-stat{border:1px solid #dbeafe;border-radius:10px;padding:8px;background:#fff}
+    .mini-stat h6{margin:0 0 6px 0;font-size:.82rem}
+    .btn{border:1px solid #bfdbfe;background:linear-gradient(#fff,#e8f0ff);padding:7px 10px;border-radius:10px;cursor:pointer;font-weight:600;color:#1e3a8a}
+    .btn:hover{background:linear-gradient(#fff,#dbeafe)}
+    .btn.primary{border-color:#1d4ed8;background:linear-gradient(#3b82f6,#1d4ed8);color:#fff}
+    .grid-wrap{max-height:58vh;overflow:auto;padding:8px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #dbeafe;padding:6px 8px;min-width:82px}
+    th{position:sticky;top:0;background:#eff6ff;font-weight:700;cursor:pointer}
+    th.selected{background:#bfdbfe}
+    td{background:#fff}
+    td:focus{outline:2px solid #93c5fd}
+    .results{padding:12px;display:flex;flex-direction:column;gap:12px;max-height:72vh;overflow:auto}
+    .out{border:1px solid #dbeafe;border-radius:12px;padding:12px;background:#f8fbff;overflow-x:auto}
+    .out h4{margin:0 0 8px 0}
+    .muted{color:var(--muted);font-size:.9rem}
+    .chip{display:inline-block;background:#e0ecff;border:1px solid #bcd3ff;padding:3px 8px;border-radius:999px;margin-right:6px;font-size:.78rem}
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,.12);display:none;align-items:flex-start;justify-content:flex-start;z-index:50;padding:12px}
+    .modal.show{display:flex}
+    /* Brightspace/LMS footer-clipping fix:
+       make dialog a flex-column shell so header/footer stay visible and only body scrolls. */
+    .dialog{position:absolute;top:24px;left:18px;transform:none;width:min(1100px,96vw);max-height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:18px;border:1px solid #cfe0ff;box-shadow:0 24px 50px rgba(2,6,23,.25);resize:both;min-width:560px;min-height:420px}
+    .dialog-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none}
+    /* Brightspace/LMS footer-clipping fix:
+       scroll inside dialog body, not on entire dialog container. */
+    .dialog-b{padding:14px 16px;display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:14px;align-items:start;flex:1 1 auto;min-height:0;overflow-y:auto}
+    .sec{border:1px solid #dbeafe;border-radius:12px;padding:10px;background:#f9fbff}
+    .sec h5{margin:0 0 8px 0;font-size:.94rem}
+    .sec-output{min-height:220px;display:flex;flex-direction:column;min-height:0}
+    .inline-output{flex:1;min-height:180px;overflow:auto}
+    label{font-size:.86rem;color:#334155;display:block;margin:8px 0 4px}
+    input,select,textarea{width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}
+    textarea{min-height:92px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .normal-applet .mode-toggle{display:flex;gap:8px;margin-bottom:10px}
+    .normal-applet .mode-toggle input{display:none}
+    .normal-applet .mode-toggle label{margin:0;padding:8px 12px;border:1px solid #93c5fd;border-radius:10px;background:#eff6ff;color:#1e3a8a;font-weight:700;cursor:pointer}
+    .normal-applet .mode-toggle input:checked + label{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+    .normal-applet .compact{margin-top:8px}
+    .normal-tool .dialog-b{grid-template-columns:1fr}
+    .normal-tool .sec-output{min-height:240px}
+    .normal-custom{padding:14px 16px;overflow-y:auto;flex:1 1 auto;min-height:0}
+    .normal-panel{border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;padding:12px}
+    .normal-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+    .normal-top h4{margin:0}
+    .normal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .normal-io{margin-top:10px}
+    .normal-io .eq{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .normal-graph{margin-top:8px}
+    .normal-btn{margin-top:10px}
+    .dist-title{margin:0 0 8px 0}
+    .dialog-f{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;position:static;background:#fff;flex:0 0 auto}
+    .err{color:#b91c1c;font-weight:600}
+    .ok{color:var(--success);font-weight:600}
+    svg{max-width:100%;height:auto;background:#fff;border:1px solid #dbeafe;border-radius:10px}
+    @media (max-width:1100px){
+      .layout{grid-template-columns:1fr}
+      .dialog-b{grid-template-columns:1fr}
+      .sec-output{min-height:unset}
+      .inline-output{min-height:260px;max-height:52vh;overflow:auto}
+    }
+    @media (max-width:900px){
+      .app-header{padding:12px}
+      .menu-bar{gap:4px}
+      .layout{padding:8px;gap:8px;min-height:auto}
+      .toolbar,.sheet-context{padding:8px}
+      .quick-actions,.dataset-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+      .quick-actions strong,.dataset-row strong,.quick-actions .muted{grid-column:1/-1}
+      .quick-actions .btn,.dataset-row .btn,.dataset-row select,.dataset-row input{width:100%;max-width:none !important}
+      .grid-wrap{max-height:44vh}
+      .results{max-height:none}
+      .out{padding:10px}
+      .out table{font-size:.9rem}
+      th,td{min-width:66px;padding:5px 6px;font-size:.92rem}
+      .dialog{left:2vw;top:10px;width:96vw;min-width:0;max-height:calc(100vh - 20px);resize:none}
+      .dialog-h{padding:10px 12px}
+      .dialog-b{padding:10px 12px}
+      .dialog-f{padding:10px 12px;flex-direction:column;align-items:stretch;gap:8px}
+      .dialog-f > div:last-child{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+      .dialog-f .btn{width:100%;margin:0}
+      .row{grid-template-columns:1fr}
+    }
+    @media (max-width:600px){
+      .title{font-size:1rem}
+      .subtitle{font-size:.82rem}
+      .menu>button{padding:7px 9px;font-size:.86rem}
+      .panel-h{padding:10px}
+      .results{max-height:none;padding:8px;gap:8px}
+      .out{padding:9px;border-radius:10px}
+      .out h4{font-size:1rem}
+      .summary-grid{grid-template-columns:1fr}
+      .dialog-f > div:last-child{grid-template-columns:1fr}
+      .btn{padding:8px 10px}
+      svg{border-radius:8px}
+    }
+  </style>
+</head><body><header class="app-header">
+<div class="title">Brightspace Statistics Workspace</div>
+<div class="subtitle">Premium, menu-driven, spreadsheet-centered analytics suite</div>
+<nav class="menu-bar" id="menuBar"></nav>
+<div class="menu-desc" id="menuDescription">Choose a menu to see its purpose and tools.</div>
+</header><main class="layout">
+<section class="card workspace-card">
+<div class="panel-h">
+<h3>Active Tool Workspace</h3>
+<div style="display: flex; gap: 8px; align-items: center;"><button class="btn" id="openDataBtn">Open Data Table</button> <span class="muted">Use menus above to launch calculators. Outputs appear in each active tool.</span></div>
+</div>
+<div class="workspace-body">
+<p class="muted" style="margin: 0 0 8px 0;">Tool-first layout enabled: each calculator keeps inputs, compute controls, formulas, charts, and interpretation together in one place.</p>
+<details class="history-panel">
+<summary><strong>Output History (optional)</strong></summary>
+<div style="margin-top: 8px;"><button class="btn" id="copyResultsBtn">Copy Output History</button></div>
+<div class="results" id="results"></div>
+</details>
+</div>
+<div class="data-drawer closed" id="dataDrawer">
+<div class="panel-h">
+<h3>Data Table Workspace</h3>
+<div><button class="btn" id="toggleDataBtn">Hide Data Table</button></div>
+</div>
+<div class="toolbar"><button class="btn" id="addRowBtn">Add 5 Rows</button> <button class="btn" id="renameColBtn">Rename Selected Column</button> <button class="btn" id="clearColBtn">Clear Selected Column</button> <button class="btn" id="sampleBtn">Import Sample Data</button> <button class="btn" id="copyColBtn">Copy Selected Column</button></div>
+<div class="sheet-context">
+<div class="quick-actions"><strong>Quick Run:</strong> <button class="btn" id="qaSummary">Summary</button> <button class="btn" id="qaQual">Qualitative</button> <button class="btn" id="qaPie">Pie</button> <button class="btn" id="qaReg">Regression (X,Y)</button> <span class="muted">Tip: Ctrl/Cmd+Click headers to select multiple columns.</span></div>
+<div class="dataset-row"><strong>Datasets:</strong> <input id="datasetName" placeholder="Dataset name" style="max-width: 220px;" type="text"> <button class="btn" id="saveDatasetBtn">Save</button><select id="datasetList" style="max-width: 240px;"></select><button class="btn" id="loadDatasetBtn">Load</button> <button class="btn" id="deleteDatasetBtn">Delete</button></div>
+<div id="colSummary" class="summary-grid"></div>
+</div>
+<div class="grid-wrap">
+<table id="dataGrid"></table>
+</div>
+</div>
+</section>
+</main>
+<div class="modal" id="toolModal">
+<div class="dialog" id="dialogWindow">
+<div class="dialog-h" id="dialogDragHandle"><strong id="dlgTitle"></strong><button class="btn" id="closeModal">Close</button></div>
+<div id="normalCustom" class="normal-custom" hidden="">
+<section class="normal-panel">
+<div class="normal-top">
+<h4>Normal Calculator</h4>
+</div>
+<div class="normal-graph" id="normalInlineOut"></div>
+<form id="normalForm">
+<div class="normal-applet mode-toggle" style="margin: 0 0 8px 0;"><input id="normalCustomStd" type="radio" name="mode" value="standard" checked="checked"> <label for="normalCustomStd">Standard</label> <input id="normalCustomBetween" type="radio" name="mode" value="between"> <label for="normalCustomBetween">Between</label></div>
+<div class="normal-grid">
+<div><label>Mean</label><input name="mu" type="number" value="0"></div>
+<div><label>Std. Dev.</label><input name="sd" type="number" value="1" step="0.01"></div>
+</div>
+<div class="normal-grid">
+<div><label>Operator (Standard)</label><select name="op">
+<option value="&lt;=">≤</option>
+<option value="&gt;=">≥</option>
+</select></div>
+<div><label>Probability</label><input name="p" type="number" step="0.0001" placeholder="leave blank to compute from x"></div>
+</div>
+<div class="normal-grid">
+<div><label>x (Standard)</label><input name="x" type="number" value="0"></div>
+<div><label>Between probability</label><input name="pmid" type="number" step="0.0001" placeholder="use for inverse between"></div>
+</div>
+<div class="normal-grid">
+<div><label>Lower bound (Between)</label><input name="lo" type="number" placeholder="optional"></div>
+<div><label>Upper bound (Between)</label><input name="hi" type="number" placeholder="optional"></div>
+</div>
+<button type="button" class="btn primary normal-btn" id="normalComputeBtn">Compute</button>
+<div id="normalMsg" class="muted" style="margin-top: 8px;"></div>
+</form></section>
+</div>
+<div class="dialog-b">
+<section class="sec">
+<h5>Configuration</h5>
+<form id="toolForm"></form></section>
+<section class="sec sec-output">
+<h5>Calculator Output</h5>
+<div id="toolOutput" class="inline-output muted">Run a computation to see results here.</div>
+</section>
+</div>
+<div class="dialog-f">
+<div id="msg" class="muted"></div>
+<div><button class="btn" id="exampleBtn">Example</button> <button class="btn" id="insertColBtn">Insert Selected Column</button> <button class="btn" id="clearBtn">Clear</button> <button class="btn primary" id="computeBtn">Compute</button></div>
+</div>
+</div>
+</div>
+<p><script>
+(() => {
+const state = { rows:30, cols:8, headers:[], selectedCol:0, selectedCols:[0], activeTool:null, showSteps:true, toolFormCache:{}, inlineOutput:{} };
+const results = document.getElementById('results');
+const grid = document.getElementById('dataGrid');
+const modal = document.getElementById('toolModal');
+const toolForm = document.getElementById('toolForm');
+const dialogWindow = document.getElementById('dialogWindow');
+const dialogDragHandle = document.getElementById('dialogDragHandle');
+const toolOutput = document.getElementById('toolOutput');
+const msg = document.getElementById('msg');
+const dialogBody = document.querySelector('.dialog-b');
+const dialogFooter = document.querySelector('.dialog-f');
+const normalCustom = document.getElementById('normalCustom');
+const normalForm = document.getElementById('normalForm');
+const normalInlineOut = document.getElementById('normalInlineOut');
+const normalMsg = document.getElementById('normalMsg');
+const dataDrawer = document.getElementById('dataDrawer');
+const DATASET_KEY='statsWorkspaceDatasetsV1';
+
+const fmt = (v,d=4)=> Number.isFinite(v)?Number(v).toFixed(d).replace(/\.?0+$/,''):'—';
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const mean=a=>sum(a)/a.length;
+const variance=(a,sample=true)=>{const m=mean(a);const den=sample?(a.length-1):a.length;return den>0?sum(a.map(v=>(v-m)**2))/den:NaN;};
+const stdev=(a,sample=true)=>Math.sqrt(variance(a,sample));
+const quantile=(arr,p)=>{const a=[...arr].sort((x,y)=>x-y);const i=(a.length-1)*p;const lo=Math.floor(i), hi=Math.ceil(i); if(lo===hi)return a[lo]; return a[lo]+(a[hi]-a[lo])*(i-lo);};
+const median=(arr)=>{const a=[...arr].sort((x,y)=>x-y);const n=a.length;const mid=Math.floor(n/2);return n%2===1?a[mid]:(a[mid-1]+a[mid])/2;};
+const quartilesTI=(arr)=>{const a=[...arr].sort((x,y)=>x-y);const n=a.length;const q2=median(a);let lower=[], upper=[];if(n%2===1){lower=a.slice(0,(n-1)/2);upper=a.slice((n+1)/2);}else{lower=a.slice(0,n/2);upper=a.slice(n/2);}return {q1:median(lower),q2,q3:median(upper)};};
+const erf=x=>{const s=Math.sign(x),ax=Math.abs(x);const t=1/(1+0.3275911*ax);const y=1-(((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax));return s*y;};
+const normCdf=z=>0.5*(1+erf(z/Math.SQRT2));
+const erfinv=x=>{let a=0.147;let ln=Math.log(1-x*x);let p=2/(Math.PI*a)+ln/2;return Math.sign(x)*Math.sqrt(Math.sqrt(p*p-ln/a)-p);};
+const normInv=p=>{if(!(p>0&&p<1)) return NaN; const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00],b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01],c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00],d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00],pl=0.02425,ph=1-pl; let q,r; if(p<pl){q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);} if(p>ph){q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);} q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);};
+const gamma=z=>{const p=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7]; if(z<0.5) return Math.PI/(Math.sin(Math.PI*z)*gamma(1-z)); z-=1; let x=0.99999999999980993; for(let i=0;i<p.length;i++) x+=p[i]/(z+i+1); const t=z+p.length-0.5; return Math.sqrt(2*Math.PI)*t**(z+0.5)*Math.exp(-t)*x;};
+const simpson=(fn,a,b,n=1200)=>{if(n%2)n++; const h=(b-a)/n; let s=fn(a)+fn(b); for(let i=1;i<n;i++) s += fn(a+i*h)*(i%2?4:2); return s*h/3;};
+const tPdf=(x,df)=>gamma((df+1)/2)/(Math.sqrt(df*Math.PI)*gamma(df/2))*((1+(x*x)/df)**(-(df+1)/2));
+const tCdf=(x,df)=>{if(!Number.isFinite(x)||df<=0) return NaN; if(x===0) return 0.5; const a=0,b=Math.abs(x); const n=Math.max(1200,Math.floor(b*800)); const area=simpson(v=>tPdf(v,df),a,b,n); return x>0?Math.min(1,0.5+area):Math.max(0,0.5-area);};
+const comb=(n,k)=>{if(k<0||k>n)return 0;k=Math.min(k,n-k);let c=1;for(let i=1;i<=k;i++)c=c*(n-k+i)/i;return c;};
+const binomPmf=(n,p,x)=>comb(n,x)*(p**x)*((1-p)**(n-x));
+const poisPmf=(l,x)=>Math.exp(-l)*l**x/fact(x);
+const fact=n=>{let f=1;for(let i=2;i<=n;i++)f*=i;return f;};
+const parseNums=t=>t.split(/[\s,\n\t]+/).map(v=>v.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
+const parseTokens=t=>t.split(/[\s,\n\t,]+/).map(v=>v.trim()).filter(Boolean);
+const parsePairs=t=>{const rows=t.trim().split(/\n+/).map(r=>r.split(/[\s,\t,]+/).map(v=>v.trim()).filter(Boolean).map(Number)).filter(r=>r.length>=2&&r.every(Number.isFinite)); if(rows.length) return rows.map(r=>[r[0],r[1]]); const nums=parseNums(t); if(nums.length>=2&&nums.length%2===0) return Array.from({length:nums.length/2},(_,i)=>[nums[2*i],nums[2*i+1]]); return [];};
+const parseCategoryFreq=t=>{const map={}, order=[]; t.trim().split(/\n+/).forEach(line=>{const m=line.trim().match(/^(.*?)[,\t ]+(-?\d+(?:\.\d+)?)\s*$/); if(!m) return; const key=m[1].trim(); const fr=Number(m[2]); if(!key||!Number.isFinite(fr)) return; if(!(key in map)) order.push(key); map[key]=(map[key]||0)+fr;}); return {map,order};};
+const parseBinaryData=(raw,success)=>{const tok=raw.split(/[\s,\n,\t]+/).map(v=>v.trim()).filter(Boolean); if(!tok.length) throw 'Enter raw data values.'; const key=String(success).trim().toLowerCase(); if(!key) throw 'Define a success value.'; const x=tok.filter(v=>v.toLowerCase()===key).length; return {x,n:tok.length};};
+const getCol = idx => Array.from({length:state.rows},(_,r)=>getCell(r,idx).textContent.trim()).filter(v=>v!=='' && Number.isFinite(Number(v))).map(Number);
+const getColRaw = idx => Array.from({length:state.rows},(_,r)=>getCell(r,idx).textContent.trim()).filter(v=>v!=='');
+
+function initGrid(){
+  state.headers = Array.from({length:state.cols},(_,i)=>`var${i+1}`);
+  renderGrid();
+}
+function renderGrid(){
+  let h='<tr><th>#</th>' + state.headers.map((v,i)=>`<th data-col="${i}" class="${state.selectedCols.includes(i)?'selected':''}">${v}</th>`).join('') + '</tr>';
+  for(let r=0;r<state.rows;r++){
+    h += `<tr><th>${r+1}</th>` + Array.from({length:state.cols},(_,c)=>`<td contenteditable="true" data-r="${r}" data-c="${c}"></td>`).join('') + '</tr>';
+  }
+  grid.innerHTML = h;
+  grid.querySelectorAll('th[data-col]').forEach(th=>th.onclick=e=>{
+    const col=+th.dataset.col;
+    if(e.ctrlKey||e.metaKey){
+      state.selectedCols = state.selectedCols.includes(col) ? state.selectedCols.filter(c=>c!==col) : [...state.selectedCols,col].sort((a,b)=>a-b);
+      if(!state.selectedCols.length) state.selectedCols=[col];
+    }else{
+      state.selectedCols=[col];
+    }
+    state.selectedCol=state.selectedCols[0];
+    renderGridFromData();
+    updateColumnSummary();
+  });
+}
+function renderGridFromData(){
+  const old = [...grid.querySelectorAll('td')].map(td=>td.textContent);
+  renderGrid();
+  grid.querySelectorAll('td').forEach((td,i)=>td.textContent=old[i]||'');
+}
+function getCell(r,c){return grid.querySelector(`td[data-r="${r}"][data-c="${c}"]`);}
+function addRows(n=5){const old=[...grid.querySelectorAll('td')].map(td=>td.textContent); state.rows+=n; renderGrid(); grid.querySelectorAll('td').forEach((td,i)=>td.textContent=old[i]||'');}
+function selectedCols(){return state.selectedCols?.length?state.selectedCols:[state.selectedCol];}
+
+function updateColumnSummary(){
+  const box=document.getElementById('colSummary');
+  const cols=selectedCols();
+  box.innerHTML=cols.slice(0,4).map(c=>{
+    const raw=getColRaw(c), nums=raw.map(Number).filter(Number.isFinite), unique=new Set(raw).size;
+    const numericPart=nums.length>1?`<div>n=${nums.length} mean=${fmt(mean(nums),4)} sd=${fmt(stdev(nums,true),4)}</div><div>min=${fmt(Math.min(...nums),4)} max=${fmt(Math.max(...nums),4)}</div>`:`<div>numeric n=${nums.length}</div>`;
+    return `<article class='mini-stat'><h6>${state.headers[c]} (col ${c+1})</h6><div>rows with data: ${raw.length}</div><div>unique values: ${unique}</div>${numericPart}</article>`;
+  }).join('') || `<div class='muted'>Select one or more columns to see quick summaries.</div>`;
+}
+
+function sheetSnapshot(){
+  return {rows:state.rows,cols:state.cols,headers:state.headers,cells:Array.from({length:state.rows},(_,r)=>Array.from({length:state.cols},(_,c)=>getCell(r,c)?.textContent??''))};
+}
+function applySnapshot(snap){
+  state.rows=snap.rows||state.rows; state.cols=snap.cols||state.cols; state.headers=[...(snap.headers||state.headers)];
+  renderGrid();
+  (snap.cells||[]).forEach((row,r)=>row.forEach((v,c)=>{const cell=getCell(r,c); if(cell) cell.textContent=v||'';}));
+  updateColumnSummary();
+}
+function readDatasets(){try{return JSON.parse(localStorage.getItem(DATASET_KEY)||'{}');}catch{return {};}}
+function writeDatasets(obj){localStorage.setItem(DATASET_KEY,JSON.stringify(obj));}
+function refreshDatasetList(){
+  const sel=document.getElementById('datasetList'); const all=readDatasets(); const names=Object.keys(all).sort();
+  sel.innerHTML = names.map(n=>`<option value="${n}">${n}</option>`).join('') || `<option value="">No saved datasets</option>`;
+}
+
+function addOutput({title,html,tags=[]}){
+  const el=document.createElement('article'); el.className='out';
+  el.innerHTML = `<h4>${title}</h4><div>${tags.map(t=>`<span class='chip'>${t}</span>`).join('')}</div>${html}`;
+  results.prepend(el);
+  if(state.activeTool){
+    state.inlineOutput[state.activeTool]={title,html,tags};
+    if(state.activeTool==='normal' && !normalCustom.hidden){
+      normalInlineOut.innerHTML = `<h4 style="margin:0 0 8px 0">${title}</h4><div>${tags.map(t=>`<span class='chip'>${t}</span>`).join('')}</div>${html}`;
+    }else{
+      toolOutput.innerHTML = `<h4 style="margin:0 0 8px 0">${title}</h4><div>${tags.map(t=>`<span class='chip'>${t}</span>`).join('')}</div>${html}`;
+    }
+  }
+}
+function saveActiveToolForm(){
+  if(!state.activeTool) return;
+  const cache={};
+  const formEl=state.activeTool==='normal'?normalForm:toolForm;
+  formEl.querySelectorAll('input,select,textarea').forEach(el=>{cache[el.name]=el.type==='checkbox'?el.checked:el.value;});
+  state.toolFormCache[state.activeTool]=cache;
+}
+function restoreToolForm(toolKey){
+  const cache=state.toolFormCache[toolKey]; if(!cache) return;
+  const formEl=toolKey==='normal'?normalForm:toolForm;
+  formEl.querySelectorAll('input,select,textarea').forEach(el=>{if(!(el.name in cache)) return; if(el.type==='checkbox') el.checked=!!cache[el.name]; else el.value=cache[el.name];});
+}
+function renderInlineOutput(toolKey){
+  const out=state.inlineOutput[toolKey];
+  const html=out?`<h4 style="margin:0 0 8px 0">${out.title}</h4><div>${out.tags.map(t=>`<span class='chip'>${t}</span>`).join('')}</div>${out.html}`:`<span class='muted'>Run a computation to see results here.</span>`;
+  if(toolKey==='normal'){
+    const mu=+normalForm.mu.value||0, sd=Math.max(1e-9,+normalForm.sd.value||1);
+    updateNormalGraphInline(mu,sd,mu-4*sd,mu+4*sd);
+  }
+  else toolOutput.innerHTML=html;
+}
+
+function barChart(labels,values,highlight=()=>false,yLabel='Value',opts={}){
+  const w=700,h=280,p=42,max=Math.max(...values,1); const bw=(w-p*2)/values.length;
+  const showValues=!!opts.showValues;
+  const valueFmt=opts.valueFormatter||((v)=>fmt(v,4));
+  let bars='';
+  values.forEach((v,i)=>{const bh=(h-p*2)*(v/max);const x=p+i*bw+4,y=h-p-bh;color=highlight(i)?'#2563eb':'#93c5fd';const valTxt=showValues?`<text x="${x+bw/2}" y="${Math.max(16,y-6)}" font-size="11" text-anchor="middle" fill="#0f172a">${valueFmt(v,i)}</text>`:'';bars+=`<rect x="${x}" y="${y}" width="${Math.max(4,bw-8)}" height="${bh}" fill="${color}" rx="4"/>${valTxt}<text x="${x+bw/2}" y="${h-p+14}" font-size="11" text-anchor="middle">${labels[i]}</text>`;});
+  return `<svg viewBox="0 0 ${w} ${h}"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#334155"/><line x1="${p}" y1="${p}" x2="${p}" y2="${h-p}" stroke="#334155"/><text x="8" y="18" font-size="11">${yLabel}</text>${bars}</svg>`;
+}
+function pieChart(labels,vals){
+  const total=sum(vals)||1,cx=180,cy=130,r=92;let a0=-Math.PI/2;const palette=['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#ea580c','#4f46e5','#0f766e','#be123c','#65a30d','#4338ca'];
+  const slices=vals.map((v,i)=>{const a1=a0+2*Math.PI*(v/total);const x1=cx+r*Math.cos(a0),y1=cy+r*Math.sin(a0),x2=cx+r*Math.cos(a1),y2=cy+r*Math.sin(a1);const large=(a1-a0)>Math.PI?1:0;const d=`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;a0=a1;return `<path d="${d}" fill="${palette[i%palette.length]}"/>`;}).join('');
+  const legend=labels.map((l,i)=>`<div><span style="display:inline-block;width:10px;height:10px;background:${palette[i%palette.length]};border-radius:2px"></span> ${l} — ${fmt((vals[i]/total)*100,2)}%</div>`).join('');
+  return `<div style="display:flex;gap:14px;align-items:center"><svg viewBox="0 0 360 260" style="max-width:360px">${slices}<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#fff"/></svg><div>${legend}</div></div>`;
+}
+function dotPlotChart(values){
+  const uniq=[...new Set(values)].sort((a,b)=>a-b); const counts=uniq.map(v=>values.filter(x=>x===v).length);
+  const w=760,p=36,maxY=Math.max(...counts,1),h=Math.max(320,160+maxY*20),bw=(w-p*2)/uniq.length;
+  const topPad=52, usable=(h-p-topPad), step=Math.max(10,usable/Math.max(maxY,1));
+  let dots='', badges='';
+  uniq.forEach((v,i)=>{
+    const cx=p+i*bw+bw/2;
+    for(let k=0;k<counts[i];k++){
+      const cy=h-p-12-k*step;
+      dots += `<circle cx="${cx}" cy="${cy}" r="8" fill="#3b82f6" opacity="0.9"/>`;
+    }
+    const topY=h-p-12-(counts[i]-1)*step;
+    const badgeY=Math.max(12,topY-24), label=String(counts[i]), bwid=Math.max(18,8+label.length*7);
+    badges += `<rect x="${cx-bwid/2}" y="${badgeY-10}" width="${bwid}" height="16" rx="7" fill="#dbeafe" stroke="#93c5fd"/><text x="${cx}" y="${badgeY+2}" font-size="11" text-anchor="middle" fill="#1e3a8a">${label}</text>`;
+    dots += `<text x="${cx}" y="${h-p+18}" font-size="12" text-anchor="middle">${v}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}"><text x="${p}" y="${p-16}" font-size="12" fill="#334155">Frequency shown above each stack</text><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#111827"/><line x1="${p}" y1="${p}" x2="${p}" y2="${h-p}" stroke="#111827"/>${badges}${dots}</svg>`;
+}
+function lineScatter(x,y,line){
+  const w=700,h=300,p=38,xmin=Math.min(...x),xmax=Math.max(...x),ymin=Math.min(...y),ymax=Math.max(...y); const X=v=>p+(v-xmin)/(xmax-xmin||1)*(w-2*p), Y=v=>h-p-(v-ymin)/(ymax-ymin||1)*(h-2*p);
+  const pts=x.map((v,i)=>`<circle cx="${X(v)}" cy="${Y(y[i])}" r="4" fill="#1d4ed8"/>`).join('');
+  const ln=line?`<line x1="${X(xmin)}" y1="${Y(line(xmin))}" x2="${X(xmax)}" y2="${Y(line(xmax))}" stroke="#ef4444" stroke-width="2"/>`:'';
+  return `<svg viewBox="0 0 ${w} ${h}"><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#334155"/><line x1="${p}" y1="${p}" x2="${p}" y2="${h-p}" stroke="#334155"/>${ln}${pts}</svg>`;
+}
+function normalCurve(mu,sd,a,b){
+  const w=720,h=280,p=30,left=mu-4*sd,right=mu+4*sd,X=v=>p+(v-left)/(right-left)*(w-2*p),pdf=v=>Math.exp(-0.5*((v-mu)/sd)**2)/(sd*Math.sqrt(2*Math.PI)),max=pdf(mu),Y=v=>h-p-(v/max)*(h-2*p);
+  let d=''; for(let i=0;i<=280;i++){const x=left+i*(right-left)/280; d += (i?'L':'M')+X(x)+' '+Y(pdf(x))+' ';}
+  let shade='';
+  if(a!=null&&b!=null){let sdPath=`M ${X(a)} ${h-p}`; for(let i=0;i<=180;i++){const x=a+i*(b-a)/180; sdPath+=` L ${X(x)} ${Y(pdf(x))}`;} sdPath += ` L ${X(b)} ${h-p} Z`; shade=`<path d="${sdPath}" fill="rgba(37,99,235,.25)"/>`;}
+  return `<svg viewBox="0 0 ${w} ${h}">${shade}<path d="${d}" fill="none" stroke="#1d4ed8" stroke-width="2"/><line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#334155"/></svg>`;
+}
+function updateNormalGraphInline(mu,sd,lo=null,hi=null){
+  normalInlineOut.innerHTML = normalCurve(mu,sd,lo,hi);
+}
+function computeNormalInline(){
+  const f=normalForm;
+  const modeEl=f.querySelector('input[name="mode"]:checked');
+  const mode=modeEl?modeEl.value:'standard';
+  const mu=+f.mu.value, sd=+f.sd.value;
+  if(!(sd>0)) throw 'Standard deviation must be positive.';
+  const op=f.op.value;
+  const normProb=v=>{let p=+v; if(p>1)p/=100; return p;};
+  const z=v=>(v-mu)/sd;
+  if(mode==='standard'){
+    const xTxt=(f.x.value||'').trim(), pTxt=(f.p.value||'').trim();
+    if(xTxt && !pTxt){
+      const x=+xTxt; if(!Number.isFinite(x)) throw 'Enter a valid x value.';
+      const p=op==='<='?normCdf(z(x)):(1-normCdf(z(x)));
+      f.p.value=fmt(p,8);
+      updateNormalGraphInline(mu,sd,op==='<='?mu-4*sd:x,op==='<='?x:mu+4*sd);
+      return;
+    }
+    if(pTxt && !xTxt){
+      const p=normProb(pTxt); if(!(p>0&&p<1)) throw 'Probability must be in (0,1) or (0,100).';
+      const x=op==='<='?(mu+sd*normInv(p)):(mu+sd*normInv(1-p));
+      f.x.value=fmt(x,8);
+      updateNormalGraphInline(mu,sd,op==='<='?mu-4*sd:x,op==='<='?x:mu+4*sd);
+      return;
+    }
+    if(xTxt&&pTxt){
+      const x=+xTxt, p=op==='<='?normCdf(z(x)):(1-normCdf(z(x)));
+      f.p.value=fmt(p,8);
+      updateNormalGraphInline(mu,sd,op==='<='?mu-4*sd:x,op==='<='?x:mu+4*sd);
+      return;
+    }
+    throw 'Enter x or probability.';
+  }
+  const loTxt=(f.lo.value||'').trim(), hiTxt=(f.hi.value||'').trim(), pMidTxt=(f.pmid.value||'').trim();
+  if(loTxt && hiTxt && !pMidTxt){
+    const lo=+loTxt, hi=+hiTxt; if(!(hi>lo)) throw 'Upper bound must be greater than lower bound.';
+    const p=normCdf(z(hi))-normCdf(z(lo));
+    f.pmid.value=fmt(p,8);
+    updateNormalGraphInline(mu,sd,lo,hi);
+    return;
+  }
+  if(pMidTxt && !loTxt && !hiTxt){
+    const pmid=normProb(pMidTxt); if(!(pmid>0&&pmid<1)) throw 'Between probability must be in (0,1) or (0,100).';
+    const zStar=normInv((1+pmid)/2), lo=mu-sd*zStar, hi=mu+sd*zStar;
+    f.lo.value=fmt(lo,8); f.hi.value=fmt(hi,8);
+    updateNormalGraphInline(mu,sd,lo,hi);
+    return;
+  }
+  if(loTxt&&hiTxt&&pMidTxt){
+    const lo=+loTxt, hi=+hiTxt; if(!(hi>lo)) throw 'Upper bound must be greater than lower bound.';
+    updateNormalGraphInline(mu,sd,lo,hi);
+    return;
+  }
+  throw 'Enter lower & upper OR enter between probability only.';
+}
+function boxPlotChart({min,q1,med,q3,max,lowWhisker,highWhisker,outliers=[]}){
+  const w=760,h=240,p=44,y=120;
+  const lo=Math.min(min,...outliers,lowWhisker), hi=Math.max(max,...outliers,highWhisker);
+  const X=v=>p+((v-lo)/(hi-lo||1))*(w-2*p);
+  const ticks=[lo,q1,med,q3,hi];
+  const outPts=outliers.map(v=>`<circle cx="${X(v)}" cy="${y}" r="4" fill="#ef4444"/>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}">
+    <line x1="${p}" y1="${y+44}" x2="${w-p}" y2="${y+44}" stroke="#334155"/>
+    ${ticks.map(t=>`<line x1="${X(t)}" y1="${y+38}" x2="${X(t)}" y2="${y+50}" stroke="#334155"/><text x="${X(t)}" y="${y+66}" font-size="11" text-anchor="middle">${fmt(t,3)}</text>`).join('')}
+    <line x1="${X(lowWhisker)}" y1="${y}" x2="${X(q1)}" y2="${y}" stroke="#1e293b" stroke-width="2"/>
+    <line x1="${X(q3)}" y1="${y}" x2="${X(highWhisker)}" y2="${y}" stroke="#1e293b" stroke-width="2"/>
+    <line x1="${X(lowWhisker)}" y1="${y-18}" x2="${X(lowWhisker)}" y2="${y+18}" stroke="#1e293b" stroke-width="2"/>
+    <line x1="${X(highWhisker)}" y1="${y-18}" x2="${X(highWhisker)}" y2="${y+18}" stroke="#1e293b" stroke-width="2"/>
+    <rect x="${X(q1)}" y="${y-24}" width="${Math.max(1,X(q3)-X(q1))}" height="48" fill="#bfdbfe" stroke="#1d4ed8"/>
+    <line x1="${X(med)}" y1="${y-24}" x2="${X(med)}" y2="${y+24}" stroke="#1d4ed8" stroke-width="3"/>
+    ${outPts}
+  </svg>`;
+}
+
+const tools = {
+  qualitative:{menu:'Data',label:'Qualitative Data Calculator',fields:`<label>Raw categories (one per line)</label><textarea name='raw'></textarea><label>Or category,frequency pairs</label><textarea name='pairs'></textarea><label>Display</label><select name='display'><option>frequency distribution</option><option>relative frequency distribution</option><option>frequency bar graph</option><option>relative frequency bar graph</option><option>pie chart</option></select><label>Bar/Pie order</label><select name='order'><option value='input'>input order</option><option value='asc'>ascending frequency</option><option value='desc'>descending frequency</option><option value='alpha'>alphabetical</option></select><label><input type='checkbox' name='showVals'> Display value above bar</label><label>Bar value label</label><select name='barLabel'><option value='auto'>auto</option><option value='freq'>frequency</option><option value='rel'>relative frequency</option><option value='pct'>percent</option></select><label>Decimals</label><input name='d' value='3' type='number'>`,example:f=>{f.raw.value='Red\nBlue\nRed\nGreen\nBlue\nBlue\nRed';},compute:f=>{let map={}; let first=[]; const remember=v=>{if(!first.includes(v)) first.push(v);}; if(f.pairs.value.trim()){f.pairs.value.trim().split(/\n+/).forEach(line=>{const [k,v]=line.split(/[,\t ]+/); const key=(k||'').trim(); const fr=Number((v||'').trim()); if(key && Number.isFinite(fr)){remember(key); map[key]=(map[key]||0)+fr;}});}else{parseTokens(f.raw.value).forEach(v=>{remember(v); map[v]=(map[v]||0)+1;});} let labels=[...first]; if(!labels.length) throw 'Enter categories or pairs.'; if(f.order.value==='alpha') labels=[...labels].sort(); if(f.order.value==='asc') labels=[...labels].sort((a,b)=>map[a]-map[b]); if(f.order.value==='desc') labels=[...labels].sort((a,b)=>map[b]-map[a]); const counts=labels.map(k=>map[k]), n=sum(counts), d=+f.d.value||3, rel=counts.map(c=>c/n); let html='<table><tr><th>Category</th><th>Frequency</th><th>Relative</th><th>Percent</th></tr>'+labels.map((k,i)=>`<tr><td>${k}</td><td>${counts[i]}</td><td>${fmt(rel[i],d)}</td><td>${fmt(rel[i]*100,d)}%</td></tr>`).join('')+'</table>'; if(f.display.value.includes('bar')){const useRel=f.display.value.startsWith('relative'); const vals=useRel?rel:counts; const mode=f.barLabel.value==='auto'?(useRel?'rel':'freq'):f.barLabel.value; const vfmt=mode==='pct'?(v=>`${fmt(v*100,d)}%`):mode==='rel'?(v=>fmt(v,d)):(v=>fmt(v,0)); html+=barChart(labels,vals,()=>false,useRel?'Relative frequency':'Frequency',{showValues:f.showVals.checked,valueFormatter:vfmt});} if(f.display.value==='pie chart') html+=pieChart(labels,counts); addOutput({title:'Qualitative Summary',tags:['Data','Categorical'],html});}},
+  graphfreq:{menu:'Graph',label:'Frequency Bar Graph',fields:`<label>Category data (one per line)</label><textarea name='raw'></textarea><label>OR category-frequency pairs (one per line)</label><textarea name='pairs' placeholder='Hawaii\t55\nFlorida\t95'></textarea><label>Order</label><select name='order'><option value='input'>input order</option><option value='asc'>ascending frequency</option><option value='desc'>descending frequency</option><option value='alpha'>alphabetical</option></select><label><input type='checkbox' name='showVals'> Display value above bar</label><label>Value style</label><select name='labelMode'><option value='freq'>frequency</option><option value='rel'>relative frequency</option><option value='pct'>percent</option></select>`,example:f=>{f.pairs.value='Hawaii\t55\nFlorida\t95\nCalifornia\t69\nNew York\t77\nAlaska\t64';f.raw.value='';},compute:f=>{let map={},order=[]; if(f.pairs.value.trim()){const out=parseCategoryFreq(f.pairs.value); map=out.map; order=out.order;} else {const vals=parseTokens(f.raw.value); if(!vals.length) throw 'Enter category data or category-frequency pairs.'; vals.forEach(v=>{if(!(v in map)) order.push(v); map[v]=(map[v]||0)+1;});} let labels=[...order]; if(!labels.length) throw 'No valid categories found.'; if(f.order.value==='alpha') labels.sort(); if(f.order.value==='asc') labels.sort((a,b)=>map[a]-map[b]); if(f.order.value==='desc') labels.sort((a,b)=>map[b]-map[a]); const counts=labels.map(k=>map[k]), n=sum(counts), d=4; const vfmt=f.labelMode.value==='pct'?(v=>`${fmt((v/n)*100,d)}%`):f.labelMode.value==='rel'?(v=>fmt(v/n,d)):(v=>fmt(v,0)); addOutput({title:'Frequency Bar Graph',tags:['Graph'],html:barChart(labels,counts,()=>false,'Frequency',{showValues:f.showVals.checked,valueFormatter:vfmt})});}},
+  graphrelfreq:{menu:'Graph',label:'Relative Frequency Bar Graph',fields:`<label>Category data (one per line)</label><textarea name='raw'></textarea><label>OR category-frequency pairs (one per line)</label><textarea name='pairs' placeholder='Hawaii\t55\nFlorida\t95'></textarea><label>Order</label><select name='order'><option value='input'>input order</option><option value='asc'>ascending frequency</option><option value='desc'>descending frequency</option><option value='alpha'>alphabetical</option></select><label><input type='checkbox' name='showVals'> Display value above bar</label><label>Value style</label><select name='labelMode'><option value='rel'>relative frequency</option><option value='pct'>percent</option></select>`,example:f=>{f.pairs.value='Hawaii\t55\nFlorida\t95\nCalifornia\t69\nNew York\t77\nAlaska\t64';f.raw.value='';},compute:f=>{let map={},order=[]; if(f.pairs.value.trim()){const out=parseCategoryFreq(f.pairs.value); map=out.map; order=out.order;} else {const vals=parseTokens(f.raw.value); if(!vals.length) throw 'Enter category data or category-frequency pairs.'; vals.forEach(v=>{if(!(v in map)) order.push(v); map[v]=(map[v]||0)+1;});} let labels=[...order]; if(!labels.length) throw 'No valid categories found.'; if(f.order.value==='alpha') labels.sort(); if(f.order.value==='asc') labels.sort((a,b)=>map[a]-map[b]); if(f.order.value==='desc') labels.sort((a,b)=>map[b]-map[a]); const n=sum(labels.map(k=>map[k])), rel=labels.map(k=>map[k]/n), d=4; const vfmt=f.labelMode.value==='pct'?(v=>`${fmt(v*100,d)}%`):(v=>fmt(v,d)); addOutput({title:'Relative Frequency Bar Graph',tags:['Graph'],html:barChart(labels,rel,()=>false,'Relative frequency',{showValues:f.showVals.checked,valueFormatter:vfmt})});}},
+  graphpie:{menu:'Graph',label:'Pie Chart',fields:`<label>Category data (one per line)</label><textarea name='raw'></textarea><label>Order</label><select name='order'><option value='input'>input order</option><option value='asc'>ascending frequency</option><option value='desc'>descending frequency</option><option value='alpha'>alphabetical</option></select>`,example:f=>{f.raw.value='North\nSouth\nNorth\nEast\nWest\nSouth\nNorth';},compute:f=>{const vals=parseTokens(f.raw.value); if(!vals.length) throw 'Enter category data.'; const map={},order=[]; vals.forEach(v=>{if(!(v in map)) order.push(v); map[v]=(map[v]||0)+1;}); let labels=[...order]; if(f.order.value==='alpha') labels.sort(); if(f.order.value==='asc') labels.sort((a,b)=>map[a]-map[b]); if(f.order.value==='desc') labels.sort((a,b)=>map[b]-map[a]); const counts=labels.map(k=>map[k]); addOutput({title:'Pie Chart',tags:['Graph'],html:pieChart(labels,counts)});}},
+  graphdot:{menu:'Graph',label:'Dot Plot',fields:`<label>Numeric data</label><textarea name='data'></textarea>`,example:f=>{f.data.value='3,3,4,5,5,5,6,6,8,8,8,8';},compute:f=>{const a=parseNums(f.data.value).sort((x,y)=>x-y); if(!a.length) throw 'Enter numeric data.'; addOutput({title:'Dot Plot',tags:['Graph'],html:dotPlotChart(a)});}},
+  graphstem:{menu:'Graph',label:'Stem-and-Leaf',fields:`<label>Numeric data</label><textarea name='data'></textarea>`,example:f=>{f.data.value='32,35,36,41,44,47,52,53,58,61,66,69';},compute:f=>{const a=parseNums(f.data.value).map(v=>Math.round(v)).sort((x,y)=>x-y); if(!a.length) throw 'Enter numeric data.'; const stems={}; a.forEach(v=>{const stem=Math.trunc(v/10), leaf=Math.abs(v%10); (stems[stem]=stems[stem]||[]).push(leaf);}); const rows=Object.keys(stems).map(Number).sort((x,y)=>x-y).map(s=>`<tr><td>${s}</td><td>${stems[s].join(' ')}</td></tr>`).join(''); addOutput({title:'Stem-and-Leaf Plot',tags:['Graph'],html:`<table><tr><th>Stem</th><th>Leaves</th></tr>${rows}</table>`});}},
+  graphbox:{menu:'Graph',label:'Box Plot (with outliers)',fields:`<label>Numeric data</label><textarea name='data'></textarea><label>Use selected column</label><select name='useSel'><option value='no'>No</option><option value='yes'>Yes</option></select>`,example:f=>{f.data.value='12,14,15,16,18,19,21,22,25,28,29,35,42';},compute:f=>{const a=(f.useSel.value==='yes'?getCol(state.selectedCol):parseNums(f.data.value)).sort((x,y)=>x-y); if(a.length<5) throw 'Enter at least 5 numeric values.'; const min=a[0], max=a[a.length-1]; const q=quartilesTI(a); const q1=q.q1, med=q.q2, q3=q.q3, iqr=q3-q1; const lowerFence=q1-1.5*iqr, upperFence=q3+1.5*iqr; const out=a.filter(v=>v<lowerFence||v>upperFence); const non=a.filter(v=>v>=lowerFence&&v<=upperFence); const lowWhisker=non[0], highWhisker=non[non.length-1]; const outText=out.length?out.map(v=>fmt(v,4)).join(', '):'None'; addOutput({title:'Box Plot with Fences/Outliers',tags:['Graph','Box Plot','TI Quartiles'],html:`<p><strong>Quartile method:</strong> TI / by hand (median of lower half and upper half)</p><p><strong>Five-number summary:</strong> min=${fmt(min,4)}, Q1=${fmt(q1,4)}, Q2/median=${fmt(med,4)}, Q3=${fmt(q3,4)}, max=${fmt(max,4)}</p><p><strong>IQR:</strong> ${fmt(iqr,4)} | <strong>Lower fence:</strong> ${fmt(lowerFence,4)} | <strong>Upper fence:</strong> ${fmt(upperFence,4)}</p><p><strong>Outliers:</strong> ${outText}</p>${boxPlotChart({min,q1,med,q3,max,lowWhisker,highWhisker,outliers:out})}`});}},
+  datasummary:{menu:'Stat',label:'Data Summary (Quick)',fields:`<label>Numeric data</label><textarea name='data'></textarea><label>Use selected column</label><select name='useSel'><option value='no'>No</option><option value='yes'>Yes</option></select><div class='row'><div><label>Decimals</label><input name='d' value='4' type='number'></div><div><label>Sort direction</label><select name='sort'><option>ascending</option><option>descending</option></select></div></div><label><input type='checkbox' name='showOrd' checked> Show ordered data</label>`,example:f=>{f.data.value='12, 15, 18, 21, 24, 12, 15, 30, 27, 22';},compute:f=>{let a=f.useSel.value==='yes'?getCol(state.selectedCol):parseNums(f.data.value); if(a.length<2) throw 'Need at least two numeric values.'; const d=+f.d.value||4; const ord=[...a].sort((x,y)=>f.sort.value==='ascending'?x-y:y-x); const q=quartilesTI(a); const q1=q.q1, q2=q.q2, q3=q.q3; const m=mean(a),sv=variance(a,true),pv=variance(a,false); const cv = Math.abs(m)<1e-12?NaN:(stdev(a,true)/Math.abs(m))*100;
+    const modes=Object.entries(a.reduce((o,v)=>(o[v]=(o[v]||0)+1,o),{})).sort((A,B)=>B[1]-A[1]);
+    const html=`<p><strong>Quartile method:</strong> TI / by hand (median of lower half and upper half)</p><table><tr><th>n</th><th>sum</th><th>mean</th><th>median</th><th>mode</th><th>min</th><th>max</th><th>range</th></tr><tr><td>${a.length}</td><td>${fmt(sum(a),d)}</td><td>${fmt(m,d)}</td><td>${fmt(q2,d)}</td><td>${modes[0][0]}</td><td>${fmt(Math.min(...a),d)}</td><td>${fmt(Math.max(...a),d)}</td><td>${fmt(Math.max(...a)-Math.min(...a),d)}</td></tr></table>
+    <p><strong>Sample s:</strong> ${fmt(Math.sqrt(sv),d)} | <strong>Population σ:</strong> ${fmt(Math.sqrt(pv),d)} | <strong>Sample variance s²:</strong> ${fmt(sv,d)} | <strong>Population variance σ²:</strong> ${fmt(pv,d)}</p>
+    <p><strong>Q1:</strong> ${fmt(q1,d)} <strong>Q2:</strong> ${fmt(q2,d)} <strong>Q3:</strong> ${fmt(q3,d)} <strong>IQR:</strong> ${fmt(q3-q1,d)} <strong>CV(sample):</strong> ${Number.isFinite(cv)?fmt(cv,d)+'%':'undefined (mean near 0)'}</p>${f.showOrd.checked?`<p><strong>Ordered data:</strong> ${ord.join(', ')}</p>`:''}`;
+    addOutput({title:'Descriptive Statistics',tags:['Stat','Summary','TI Quartiles'],html});}},
+  datasort:{menu:'Helpers',label:'Data Sort / Order Tool',fields:`<label>Numeric data</label><textarea name='data'></textarea><label>Sort</label><select name='sort'><option>ascending</option><option>descending</option></select>`,example:f=>{f.data.value='8, 2, 10, 1, 6, 5, 9';},compute:f=>{const a=parseNums(f.data.value); if(!a.length) throw 'Enter numeric data.'; const s=[...a].sort((x,y)=>f.sort.value==='ascending'?x-y:y-x); addOutput({title:'Data Order Result',tags:['Helpers'],html:`<p><strong>Original:</strong> ${a.join(', ')}</p><p><strong>Sorted:</strong> ${s.join(', ')}</p><p><strong>n:</strong> ${a.length} <strong>min:</strong> ${Math.min(...a)} <strong>max:</strong> ${Math.max(...a)}</p><textarea>${s.join('\n')}</textarea>`});}},
+  grouped:{menu:'Stat',label:'Grouped Data Calculator',fields:`<label>Class interval and frequency (one class per line)</label><textarea name='classfreq' placeholder='30 - 34\t4\n35 - 39\t9\n40 - 44\t8'></textarea><label>OR lower class limits (one per line)</label><textarea name='lower'></textarea><label>OR frequencies (one per line)</label><textarea name='freq'></textarea><label>Decimals</label><input name='d' type='number' value='4'>`,example:f=>{f.classfreq.value='30 - 34\t4\n35 - 39\t9\n40 - 44\t8\n45 - 49\t8\n50 - 54\t16\n55 - 59\t8\n60 - 64\t8\n65 - 69\t9\n70 - 74\t4';f.lower.value='';f.freq.value='';},compute:f=>{let classes=[], F=[]; if(f.classfreq.value.trim()){const lines=f.classfreq.value.trim().split(/\n+/); for(const line of lines){const m=line.match(/^\s*(-?\d+(?:\.\d+)?)\s*[-–]\s*(-?\d+(?:\.\d+)?)\s*[,\t ]+\s*(-?\d+(?:\.\d+)?)\s*$/); if(!m) throw `Could not parse class/frequency line: \"${line}\"`; const lo=+m[1], hi=+m[2], fr=+m[3]; if(!(hi>lo)) throw `Upper class limit must exceed lower in line: \"${line}\"`; if(!(fr>=0)) throw `Frequency must be nonnegative in line: \"${line}\"`; classes.push([lo,hi]); F.push(fr);} for(let i=1;i<classes.length;i++) if(classes[i][0]<=classes[i-1][0]) throw 'Classes must be entered in increasing order.';} else {const L=parseNums(f.lower.value); F=parseNums(f.freq.value); if(L.length<2||L.length!==F.length) throw 'Enter class-frequency lines or matching lower limits/frequencies.'; for(let i=1;i<L.length;i++) if(L[i]<=L[i-1]) throw 'Lower class limits must be strictly increasing.'; const w=L[1]-L[0]; classes=L.map(l=>[l,l+w]);} const lowerLimits=classes.map(c=>c[0]); const lowerDiffs=lowerLimits.slice(1).map((v,i)=>v-lowerLimits[i]); const consistent=lowerDiffs.length?lowerDiffs.every(d=>Math.abs(d-lowerDiffs[0])<1e-9):true; const classWidth=lowerDiffs.length?lowerDiffs[0]:(classes[0][1]-classes[0][0]); const mids=lowerLimits.map((lo,i)=>lo + ((i<lowerLimits.length-1 ? (lowerLimits[i+1]-lo) : classWidth)/2)); const N=sum(F); if(!(N>1)) throw 'Total frequency must be greater than 1.'; const mu=sum(mids.map((m,i)=>m*F[i]))/N; const ss=sum(mids.map((m,i)=>((m-mu)**2)*F[i])); const s=Math.sqrt(ss/(N-1)); const rows=classes.map((cl,i)=>`<tr><td>${cl[0]}–${cl[1]}</td><td>${fmt(mids[i],2)}</td><td>${F[i]}</td><td>${fmt(mids[i]*F[i],2)}</td><td>${fmt(((mids[i]-mu)**2)*F[i],2)}</td></tr>`).join('');
+    addOutput({title:'Grouped Data Summary (Consecutive lower limits midpoint convention)',tags:['Grouped'],html:`<p>Class width from consecutive lower class limits = ${consistent?fmt(classWidth,4):'varies by class'}. Midpoint formula used: midpoint = (current lower limit + next lower limit) ÷ 2.</p><table><tr><th>Class</th><th>Midpoint</th><th>f</th><th>midpoint×f</th><th>(x̄-m)^2×f</th></tr>${rows}</table><p><strong>Grouped mean:</strong> ${fmt(mu,+f.d.value||4)} <strong>Grouped sample s:</strong> ${fmt(s,+f.d.value||4)}</p>`});}},
+  discrete:{menu:'Probability',label:'Discrete Probability Distribution',fields:`<label>x, P(x) pairs</label><textarea name='pairs'></textarea>`,example:f=>{f.pairs.value='0 0.1\n1 0.2\n2 0.3\n3 0.25\n4 0.15';},compute:f=>{const p=parsePairs(f.pairs.value); if(!p.length) throw 'Enter x,P(x) pairs.'; const xs=p.map(r=>r[0]), ps=p.map(r=>r[1]); if(ps.some(v=>v<0||v>1)) throw 'Probabilities must be between 0 and 1.'; const tot=sum(ps); if(Math.abs(tot-1)>1e-6) throw `Probabilities must sum to 1 (current ${fmt(tot,6)}).`; const mu=sum(xs.map((x,i)=>x*ps[i])); const v=sum(xs.map((x,i)=>((x-mu)**2)*ps[i])); const s=Math.sqrt(v); addOutput({title:'Discrete Distribution Analysis',tags:['Probability'],html:`<p>μ = Σ[xP(x)] = ${fmt(mu,6)}<br>σ² = Σ[(x-μ)²P(x)] = ${fmt(v,6)}<br>σ = ${fmt(s,6)}</p>${barChart(xs,ps,()=>false,'P(x)')}`});}},
+  binomial:{menu:'Applets',label:'Binomial Calculator',fields:`<label>Mode</label><select name='mode'><option value='standard'>Standard</option><option value='between'>Between</option></select><div class='row'><div><label>n</label><input name='n' type='number'></div><div><label>p</label><input name='p' type='number' step='0.001'></div></div><label>Operator (Standard mode)</label><select name='op'><option>=</option><option><=</option><option><</option><option>>=</option><option>></option></select><div class='row'><div><label>x / lower</label><input name='x1' type='number'></div><div><label>upper (Between mode)</label><input name='x2' type='number'></div></div><label><input type='checkbox' name='steps' checked> Show steps</label>`,example:f=>{f.mode.value='between';f.n.value=12;f.p.value=.35;f.x1.value=3;f.x2.value=6;},compute:f=>{const n=+f.n.value,p=+f.p.value; if(!(n>=1&&Number.isInteger(n))) throw 'n must be an integer ≥ 1'; if(!(p>0&&p<1)) throw 'p must be between 0 and 1'; const mode=f.mode.value, op=f.op.value, a=Math.floor(+f.x1.value), b=Math.floor(+f.x2.value); if(!(a>=0&&a<=n)) throw 'x/lower must be between 0 and n.'; if(mode==='between' && (!(b>=a&&b<=n))) throw 'Upper bound must be between lower and n.'; const xs=Array.from({length:n+1},(_,i)=>i), pmf=xs.map(x=>binomPmf(n,p,x)); const inSel=x=>mode==='between'?(x>=a&&x<=b):(op==='='?x===a:op==='<='?x<=a:op==='<'?x<a:op==='>='?x>=a:x>a); const prob=sum(xs.filter(inSel).map(x=>pmf[x])); const label=mode==='between'?`${a} ≤ X ≤ ${b}`:`X ${op} ${a}`; const cdfAtA=sum(xs.filter(x=>x<=a).map(x=>pmf[x])); const steps=f.steps.checked?`<details open><summary>Show/Hide steps</summary><ol><li>Verify binomial conditions: fixed n, independent trials, two outcomes, constant p.</li><li>Compute each term using P(X=x)=C(n,x)p^x(1-p)^(n-x).</li><li>Add selected bars for ${label}.</li></ol></details>`:''; addOutput({title:'Binomial Applet Output',tags:['Applet','Binomial'],html:`<p><strong>P(${label}) = ${fmt(prob,8)}</strong><br>μ=np=${fmt(n*p,4)}, σ=√np(1-p)=${fmt(Math.sqrt(n*p*(1-p)),4)}, CDF at x=${a} is P(X≤${a})=${fmt(cdfAtA,8)}</p>${barChart(xs,pmf,i=>inSel(i),'P(X=x)')}${steps}<p class='muted'>Use Standard mode for single-threshold operators and Between mode for interval probability.</p>`});}},
+  poisson:{menu:'Applets',label:'Poisson Calculator',fields:`<label>λ (mean rate)</label><input name='l' type='number' step='0.01'><label>Operator</label><select name='op'><option>=</option><option><=</option><option><</option><option>>=</option><option>></option><option>between</option></select><div class='row'><div><label>x / lower</label><input name='x1' type='number'></div><div><label>upper</label><input name='x2' type='number'></div></div>`,example:f=>{f.l.value=4.2;f.op.value='<=';f.x1.value=3;},compute:f=>{const l=+f.l.value; if(!(l>0)) throw 'λ must be positive.'; const max=Math.max(20,Math.ceil(l+6*Math.sqrt(l))); const xs=Array.from({length:max+1},(_,i)=>i), pmf=xs.map(x=>poisPmf(l,x)); const op=f.op.value,a=Math.floor(+f.x1.value),b=Math.floor(+f.x2.value); const sel=x=>op==='='?x===a:op==='<='?x<=a:op==='<'?x<a:op==='>='?x>=a:op==='>'?x>a:(x>=a&&x<=b); const prob=sum(xs.filter(sel).map(x=>pmf[x])); addOutput({title:'Poisson Applet Output',tags:['Applet','Poisson'],html:`<p><strong>P(${op==='between'?a+' ≤ X ≤ '+b:'X '+op+' '+a}) = ${fmt(prob,8)}</strong></p>${barChart(xs,pmf,i=>sel(i),'P(X=x)')}`});}},
+  normal:{menu:'Applets',label:'Normal Calculator',fields:`<div class='normal-applet'><div class='mode-toggle'><input id='normalModeStd' type='radio' name='mode' value='standard' checked><label for='normalModeStd'>Standard</label><input id='normalModeBetween' type='radio' name='mode' value='between'><label for='normalModeBetween'>Between</label></div><div class='row compact'><div><label>Mean</label><input name='mu' value='0' type='number'></div><div><label>Std. Dev.</label><input name='sd' value='1' type='number' step='0.01'></div></div><div class='row compact'><div><label>Operator (Standard)</label><select name='op'><option value='<='>≤</option><option value='>='>≥</option></select></div><div><label>Probability</label><input name='p' type='number' step='0.0001' placeholder='Leave blank to compute from x'></div></div><div class='row compact'><div><label>x (Standard)</label><input name='x' type='number' value='0' placeholder='Leave blank to solve x from probability'></div><div><label>Between lower</label><input name='lo' type='number' placeholder='optional'></div></div><div class='row compact'><div><label>Between upper</label><input name='hi' type='number' placeholder='optional'></div><div><label>Between probability</label><input name='pmid' type='number' step='0.0001' placeholder='Use for inverse between'></div></div></div>`,example:f=>{f.mode.value='standard';f.mu.value=0;f.sd.value=1;f.op.value='<=';f.x.value=2.1;f.p.value='';f.lo.value='';f.hi.value='';f.pmid.value='';},compute:f=>{const mu=+f.mu.value,sd=+f.sd.value; if(!(sd>0)) throw 'Standard deviation must be positive.'; const mode=f.mode.value, op=f.op.value, z=v=>(v-mu)/sd; const normProb=v=>{let p=+v; if(p>1)p/=100; return p;}; if(mode==='standard'){ const xTxt=(f.x.value||'').trim(), pTxt=(f.p.value||'').trim(); if(pTxt && !xTxt){ const p=normProb(pTxt); if(!(p>0&&p<1)) throw 'Probability must be in (0,1) or (0,100).'; const x=op==='<='?(mu+sd*normInv(p)):(mu+sd*normInv(1-p)); const lo=op==='<='?mu-4*sd:x, hi=op==='<='?x:mu+4*sd; addOutput({title:'Normal Calculator',tags:['Normal','Applet'],html:`<p><strong>P(X ${op} x) = ${fmt(p,8)}</strong> ⇒ <strong>x = ${fmt(x,8)}</strong></p>${normalCurve(mu,sd,lo,hi)}`}); return; } const x=+f.x.value; if(!Number.isFinite(x)) throw 'Enter x or probability.'; const p=op==='<='?normCdf(z(x)):(1-normCdf(z(x))); const lo=op==='<='?mu-4*sd:x, hi=op==='<='?x:mu+4*sd; addOutput({title:'Normal Calculator',tags:['Normal','Applet'],html:`<p><strong>P(X ${op} ${fmt(x,6)}) = ${fmt(p,8)}</strong></p>${normalCurve(mu,sd,lo,hi)}`}); return; } const loTxt=(f.lo.value||'').trim(), hiTxt=(f.hi.value||'').trim(), pMidTxt=(f.pmid.value||'').trim(); if(pMidTxt && !loTxt && !hiTxt){ const pmid=normProb(pMidTxt); if(!(pmid>0&&pmid<1)) throw 'Between probability must be in (0,1) or (0,100).'; const zStar=normInv((1+pmid)/2), lo=mu-sd*zStar, hi=mu+sd*zStar; addOutput({title:'Normal Calculator',tags:['Normal','Applet'],html:`<p><strong>${fmt(lo,6)} ≤ X ≤ ${fmt(hi,6)}</strong> gives middle probability <strong>${fmt(pmid,8)}</strong></p>${normalCurve(mu,sd,lo,hi)}`}); return; } const lo=+f.lo.value, hi=+f.hi.value; if(!(hi>lo)) throw 'Between mode requires upper > lower.'; const p=normCdf(z(hi))-normCdf(z(lo)); addOutput({title:'Normal Calculator',tags:['Normal','Applet'],html:`<p><strong>P(${fmt(lo,6)} ≤ X ≤ ${fmt(hi,6)}) = ${fmt(p,8)}</strong></p>${normalCurve(mu,sd,lo,hi)}`});}},
+  propz:{menu:'Hypothesis Tests',label:'One-Proportion z Test',fields:`<label>Input mode</label><select name='mode'><option value='summary'>Summary (x, n)</option><option value='raw'>Raw data</option></select><div class='row'><div><label>x successes (summary mode)</label><input name='x' type='number'></div><div><label>n (summary mode)</label><input name='n' type='number'></div></div><label>Raw data (tokens like yes/no, pass/fail)</label><textarea name='raw'></textarea><label>Define success value (raw mode)</label><input name='success' value='yes'><label>Null p0</label><input name='p0' type='number' step='0.001'><label>Alternative</label><select name='alt'><option value='!='>two-tailed</option><option value='>'>right-tailed</option><option value='<' >left-tailed</option></select><label>α</label><input name='a' value='0.05' type='number' step='0.001'>`,example:f=>{f.mode.value='raw';f.raw.value='yes no yes yes no yes yes no yes yes';f.success.value='yes';f.p0.value=.5;},compute:f=>{let x=+f.x.value,n=+f.n.value; if(f.mode.value==='raw'){const out=parseBinaryData(f.raw.value,f.success.value); x=out.x; n=out.n;} const p0=+f.p0.value,alt=f.alt.value,a=+f.a.value; if(!(n>0&&x>=0&&x<=n)) throw 'Require 0 ≤ x ≤ n and n>0'; if(!(p0>0&&p0<1)) throw 'p0 must be in (0,1).'; const ph=x/n,se=Math.sqrt(p0*(1-p0)/n),z=(ph-p0)/se; let p=0; if(alt==='>')p=1-normCdf(z); else if(alt==='<')p=normCdf(z); else p=2*Math.min(normCdf(z),1-normCdf(z)); const concl=p<a?'Reject H₀':'Fail to reject H₀'; addOutput({title:'One-Proportion z Test',tags:['Hypothesis'],html:`<p>Data summary used: x=${x}, n=${n}, p̂=${fmt(ph,5)} ${f.mode.value==='raw'?`(success = "${f.success.value}")`:''}</p><p>H₀: p=${p0}, Hₐ: p ${alt} ${p0}<br>SE₀=${fmt(se,5)}, z=${fmt(z,5)}, P-value=${fmt(p,7)}</p><p><strong>${concl}</strong> at α=${a}.</p>`});}},
+  ciprop:{menu:'Confidence Intervals',label:'Confidence Interval for a Proportion',fields:`<label>Input mode</label><select name='mode'><option value='summary'>Summary (x, n)</option><option value='raw'>Raw data</option></select><div class='row'><div><label>x (summary mode)</label><input name='x' type='number'></div><div><label>n (summary mode)</label><input name='n' type='number'></div></div><label>Raw data (tokens)</label><textarea name='raw'></textarea><label>Define success value (raw mode)</label><input name='success' value='yes'><label>Confidence level (0.95 or 95)</label><input name='cl' value='0.95'>`,example:f=>{f.mode.value='raw';f.raw.value='yes yes no yes no yes yes yes no yes';f.success.value='yes';f.cl.value=.95;},compute:f=>{let x=+f.x.value,n=+f.n.value; if(f.mode.value==='raw'){const out=parseBinaryData(f.raw.value,f.success.value); x=out.x; n=out.n;} let cl=+f.cl.value; if(cl>1)cl/=100; if(!(n>0&&x>=0&&x<=n)) throw 'Require 0 ≤ x ≤ n and n>0'; if(!(cl>0&&cl<1)) throw 'Confidence level must be between 0 and 1 (or 0 and 100).'; const ph=x/n,z=normInv((1+cl)/2),se=Math.sqrt(ph*(1-ph)/n),me=z*se; addOutput({title:'CI for Proportion',tags:['CI'],html:`<p>Data summary used: x=${x}, n=${n}, p̂=${fmt(ph,6)} ${f.mode.value==='raw'?`(success = "${f.success.value}")`:''}</p><p>z*=${fmt(z,5)}, SE=${fmt(se,6)}, ME=${fmt(me,6)}</p><p><strong>${fmt(ph-me,6)} to ${fmt(ph+me,6)}</strong></p>`});}},
+  nprop:{menu:'Confidence Intervals',label:'Sample Size for a Proportion',fields:`<label>Confidence level</label><input name='cl' value='0.95'><label>Margin of error E</label><input name='E' value='0.03'><label>Prior estimate p-hat (optional)</label><input name='p' placeholder='blank uses 0.5'>`,example:f=>{f.cl.value=.95;f.E.value=.04;f.p.value='';},compute:f=>{let cl=+f.cl.value;if(cl>1)cl/=100;const E=+f.E.value;const p=f.p.value.trim()===''?0.5:+f.p.value;if(!(E>0&&E<1)) throw 'Margin of error must be in (0,1).'; if(!(p>0&&p<1)) throw 'p-hat must be in (0,1).'; const z=normInv((1+cl)/2); const n=Math.ceil((z*z*p*(1-p))/(E*E)); addOutput({title:'Required Sample Size (Proportion)',tags:['Planning'],html:`<p>Using n = z² p(1-p)/E² with z*=${fmt(z,5)} and p=${p}.</p><p><strong>n = ${n}</strong> (rounded up)</p>`});}},
+  ttest:{menu:'Hypothesis Tests',label:'One-Sample t Test for a Mean',fields:`<label>Input mode</label><select name='mode'><option value='summary'>Summary (x̄, s, n)</option><option value='raw'>Raw numeric data</option></select><div class='row'><div><label>x̄ (summary mode)</label><input name='xb' type='number'></div><div><label>s (summary mode)</label><input name='s' type='number'></div></div><div class='row'><div><label>n (summary mode)</label><input name='n' type='number'></div><div><label>μ0</label><input name='mu0' type='number'></div></div><label>Raw data (raw mode)</label><textarea name='raw'></textarea><label>Alternative</label><select name='alt'><option value='!='>two-tailed</option><option value='>'>right-tailed</option><option value='<' >left-tailed</option></select><label>α</label><input name='a' value='0.05'>`,example:f=>{f.mode.value='raw';f.raw.value='70, 72, 69, 74, 73, 71, 68, 75';f.mu0.value=70;},compute:f=>{let xb=+f.xb.value,s=+f.s.value,n=+f.n.value; if(f.mode.value==='raw'){const a=parseNums(f.raw.value); if(a.length<2) throw 'Need at least two raw values.'; n=a.length; xb=mean(a); s=stdev(a,true);} const mu0=+f.mu0.value,alt=f.alt.value,a=+f.a.value; if(!(n>1&&s>0)) throw 'Need n>1 and s>0'; const se=s/Math.sqrt(n), t=(xb-mu0)/se, df=n-1; const cdf=tCdf(t,df); let p=0; if(alt==='>')p=1-cdf; else if(alt==='<')p=cdf; else p=2*Math.min(cdf,1-cdf); addOutput({title:'One-Sample t Test (instructional)',tags:['Hypothesis','t-test'],html:`<p>Data summary used: x̄=${fmt(xb,6)}, s=${fmt(s,6)}, n=${n}</p><p>t = (x̄-μ₀)/(s/√n) = ${fmt(t,6)}, df=${df}, SE=${fmt(se,6)}</p><p>P-value (t distribution) ≈ ${fmt(p,7)}. <strong>${p<a?'Reject':'Fail to reject'} H₀</strong>.</p>`});}},
+  cimean:{menu:'Confidence Intervals',label:'Confidence Interval for a Mean',fields:`<label>Input mode</label><select name='mode'><option value='summary'>Summary (x̄, s, n)</option><option value='raw'>Raw numeric data</option></select><div class='row'><div><label>x̄ (summary mode)</label><input name='xb' type='number'></div><div><label>s (summary mode)</label><input name='s' type='number'></div></div><div class='row'><div><label>n (summary mode)</label><input name='n' type='number'></div><div><label>Confidence level</label><input name='cl' value='0.95'></div></div><label>Raw data (raw mode)</label><textarea name='raw'></textarea>`,example:f=>{f.mode.value='raw';f.raw.value='82, 84, 79, 90, 87, 85, 83, 81';f.cl.value=.95;},compute:f=>{let cl=+f.cl.value;if(cl>1)cl/=100;let xb=+f.xb.value,s=+f.s.value,n=+f.n.value; if(f.mode.value==='raw'){const a=parseNums(f.raw.value); if(a.length<2) throw 'Need at least two raw values.'; n=a.length; xb=mean(a); s=stdev(a,true);} if(!(n>1&&s>0))throw 'Need n>1 and positive s'; const se=s/Math.sqrt(n), tStar=normInv((1+cl)/2), me=tStar*se; addOutput({title:'CI for Mean (t-structure)',tags:['CI','Mean'],html:`<p>Data summary used: x̄=${fmt(xb,6)}, s=${fmt(s,6)}, n=${n}</p><p>df=${n-1}, SE=${fmt(se,6)}, critical≈${fmt(tStar,5)}, ME=${fmt(me,6)}</p><p><strong>${fmt(xb-me,6)} to ${fmt(xb+me,6)}</strong></p>`});}},
+  nmean:{menu:'Confidence Intervals',label:'Sample Size for a Mean',fields:`<label>Confidence level</label><input name='cl' value='0.95'><label>Estimated σ (or s)</label><input name='s' value='12'><label>Margin of error E</label><input name='E' value='2'>`,example:f=>{f.cl.value=.95;f.s.value=8;f.E.value=1.5;},compute:f=>{let cl=+f.cl.value;if(cl>1)cl/=100;const s=+f.s.value,E=+f.E.value; if(!(s>0&&E>0)) throw 'σ and E must be positive.'; const z=normInv((1+cl)/2), n=Math.ceil((z*s/E)**2); addOutput({title:'Required Sample Size (Mean)',tags:['Planning'],html:`<p>Planning formula n=(zσ/E)² with z*=${fmt(z,5)}.</p><p><strong>n = ${n}</strong> (rounded up)</p>`});}},
+  regression:{menu:'Regression',label:'Simple Linear Regression',fields:`<label>Paired x,y data</label><textarea name='pairs'></textarea><label>Prediction x (optional)</label><input name='xp' type='number'><label><input type='checkbox' name='resid' checked> Show residuals vs x plot</label>`,example:f=>{f.pairs.value='1 2\n2 3\n3 5\n4 4\n5 6\n6 8';f.xp.value=7;},compute:f=>{const p=parsePairs(f.pairs.value); if(p.length<3) throw 'Need at least three pairs.'; const x=p.map(r=>r[0]),y=p.map(r=>r[1]),mx=mean(x),my=mean(y); const Sxx=sum(x.map(v=>(v-mx)**2)),Sxy=sum(x.map((v,i)=>(v-mx)*(y[i]-my))); const b1=Sxy/Sxx,b0=my-b1*mx; const yhat=x.map(v=>b0+b1*v),res=y.map((v,i)=>v-yhat[i]); const r=Sxy/Math.sqrt(Sxx*sum(y.map(v=>(v-my)**2))),r2=r*r; const s=Math.sqrt(sum(res.map(v=>v*v))/(x.length-2));
+    let html=`<p>ŷ = ${fmt(b0,6)} + ${fmt(b1,6)}x; r=${fmt(r,6)}; R²=${fmt(r2,6)}; s_e=${fmt(s,6)}</p>${lineScatter(x,y,v=>b0+b1*v)}`;
+    if(f.resid.checked) html += `<h5>Residuals vs x</h5>${lineScatter(x,res,null)}`;
+    if(f.xp.value!==''){const xp=+f.xp.value;const yp=b0+b1*xp; html += `<p><strong>Prediction at x=${xp}: ŷ=${fmt(yp,6)}</strong> (${xp<Math.min(...x)||xp>Math.max(...x)?'extrapolation warning':'interpolation'})</p>`;}
+    html += `<table><tr><th>Coefficient</th><th>Estimate</th></tr><tr><td>Intercept</td><td>${fmt(b0,6)}</td></tr><tr><td>Slope</td><td>${fmt(b1,6)}</td></tr></table>`;
+    html += `<h5>Residual Table</h5><table><tr><th>x</th><th>y</th><th>ŷ</th><th>Residual (y-ŷ)</th></tr>${x.map((xi,i)=>`<tr><td>${fmt(xi,6)}</td><td>${fmt(y[i],6)}</td><td>${fmt(yhat[i],6)}</td><td>${fmt(res[i],6)}</td></tr>`).join('')}</table>`;
+    addOutput({title:'Simple Linear Regression',tags:['Regression'],html});}},
+  scattercorr:{menu:'Graph',label:'Scatterplot / Correlation Tool',fields:`<label>Paired x,y data</label><textarea name='pairs'></textarea><label>Display mode</label><select name='mode'><option>points-and-line</option><option>points-only</option></select>`,example:f=>{f.pairs.value='10 20\n12 22\n14 29\n16 31\n18 34';},compute:f=>{const p=parsePairs(f.pairs.value); if(p.length<2) throw 'Enter paired data.'; const x=p.map(r=>r[0]),y=p.map(r=>r[1]),mx=mean(x),my=mean(y); const r=sum(x.map((v,i)=>(v-mx)*(y[i]-my)))/Math.sqrt(sum(x.map(v=>(v-mx)**2))*sum(y.map(v=>(v-my)**2))); const b1=sum(x.map((v,i)=>(v-mx)*(y[i]-my)))/sum(x.map(v=>(v-mx)**2)); const b0=my-b1*mx; addOutput({title:'Scatterplot & Correlation',tags:['Graph'],html:`<p>r=${fmt(r,6)}. Direction: ${r>0?'positive':'negative'}. Strength: ${Math.abs(r)>0.8?'strong':Math.abs(r)>0.4?'moderate':'weak'}.</p>${lineScatter(x,y,f.mode.value==='points-and-line'?(v=>b0+b1*v):null)}<p class='muted'>Correlation does not imply causation.</p>`});}},
+  contingency:{menu:'Stat',label:'Contingency Table / Conditional Distribution',fields:`<label>Row labels (comma)</label><input name='rows' value='A,B'><label>Column labels (comma)</label><input name='cols' value='Yes,No'><label>Counts matrix rows by line, comma-separated</label><textarea name='mat'>30,20\n15,35</textarea>`,example:f=>{},compute:f=>{const rows=f.rows.value.split(',').map(s=>s.trim()).filter(Boolean), cols=f.cols.value.split(',').map(s=>s.trim()).filter(Boolean); const mat=f.mat.value.trim().split(/\n+/).map(r=>r.split(',').map(Number)); if(mat.length!==rows.length||mat.some(r=>r.length!==cols.length||r.some(v=>!Number.isFinite(v)||v<0))) throw 'Matrix dimensions must match labels and contain nonnegative counts.'; const rowTot=mat.map(r=>sum(r)), colTot=cols.map((_,j)=>sum(mat.map(r=>r[j]))), N=sum(rowTot);
+    let t='<table><tr><th></th>'+cols.map(c=>`<th>${c}</th>`).join('')+'<th>Row total</th></tr>';
+    mat.forEach((r,i)=>{t+=`<tr><th>${rows[i]}</th>`+r.map(v=>`<td>${v}</td>`).join('')+`<td>${rowTot[i]}</td></tr>`});
+    t+=`<tr><th>Col total</th>${colTot.map(v=>`<td>${v}</td>`).join('')}<td>${N}</td></tr></table>`;
+    const bars=barChart(rows,rowTot.map(v=>v/N),()=>false,'Row marginal proportion');
+    addOutput({title:'Contingency & Conditional Distributions',tags:['Categorical'],html:`${t}<p>Marginal distributions shown. Row conditional % and column conditional % can be read by dividing each cell by row total or column total, respectively.</p>${bars}`});}},
+};
+
+const menuDescriptions = {
+  Data:'Prepare, clean, and structure spreadsheet data for analysis.',
+  Stat:'Compute descriptive and categorical summaries.',
+  Graph:'Build visual summaries including frequency bars, pie charts, dot plots, and stem-leaf displays.',
+  Probability:'Analyze discrete probability distributions.',
+  'Confidence Intervals':'Estimate parameters and planning sample sizes.',
+  'Hypothesis Tests':'Test claims for means and proportions.',
+  Regression:'Fit and interpret least-squares regression models.',
+  Helpers:'Sort and organize raw numeric datasets.',
+  Calculators:'Open distribution and probability calculator applets.'
+};
+
+const menuMap = {
+  Data:['qualitative'],
+  Stat:['datasummary','grouped','contingency'],
+  Graph:['graphfreq','graphrelfreq','graphpie','graphdot','graphstem','graphbox'],
+  Probability:['discrete'],
+  'Confidence Intervals':['ciprop','cimean','nprop','nmean'],
+  'Hypothesis Tests':['propz','ttest'],
+  Regression:['regression'],
+  Helpers:['datasort'],
+  Calculators:['binomial','poisson','normal']
+};
+
+function renderMenu(){
+  const bar=document.getElementById('menuBar');
+  const desc=document.getElementById('menuDescription');
+  bar.innerHTML = Object.keys(menuMap).map(name=>`<div class='menu'><button>${name}</button><div class='dropdown'>${menuMap[name].map(k=>`<button data-tool='${k}'>${tools[k].label}</button>`).join('')}</div></div>`).join('');
+  bar.querySelectorAll('.menu>button').forEach(b=>b.onclick=e=>{e.stopPropagation(); const m=b.parentElement; bar.querySelectorAll('.menu').forEach(x=>{if(x!==m)x.classList.remove('open');}); m.classList.toggle('open'); desc.textContent = menuDescriptions[b.textContent] || 'Choose a tool from this menu.';});
+  bar.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>openTool(b.dataset.tool));
+  document.body.addEventListener('click',()=>bar.querySelectorAll('.menu').forEach(m=>m.classList.remove('open')));
+}
+function openTool(k){
+  saveActiveToolForm();
+  state.activeTool=k; const t=tools[k]; document.getElementById('dlgTitle').textContent=t.label;
+  dialogWindow.classList.toggle('normal-tool',k==='normal');
+  if(k==='normal'){
+    normalCustom.hidden=false;
+    dialogBody.style.display='none';
+    dialogFooter.style.display='none';
+    restoreToolForm('normal');
+    const mu=+normalForm.mu.value||0, sd=Math.max(1e-9,+normalForm.sd.value||1);
+    updateNormalGraphInline(mu,sd,mu-4*sd,mu+4*sd);
+  }else{
+    normalCustom.hidden=true;
+    dialogBody.style.display='grid';
+    dialogFooter.style.display='flex';
+    toolForm.innerHTML=t.fields;
+    restoreToolForm(k);
+    renderInlineOutput(k);
+  }
+  dialogWindow.style.top='24px'; dialogWindow.style.left='18px'; dialogWindow.style.transform='none';
+  msg.textContent=''; modal.classList.add('show');
+}
+
+// draggable modal window
+(()=>{
+  let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
+  dialogDragHandle.addEventListener('mousedown',e=>{
+    if(e.target.closest('button')) return;
+    dragging=true;
+    const rect=dialogWindow.getBoundingClientRect();
+    startX=e.clientX; startY=e.clientY; startLeft=rect.left; startTop=rect.top;
+    dialogWindow.style.transform='none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const left=Math.max(8,startLeft+(e.clientX-startX));
+    const top=Math.max(8,startTop+(e.clientY-startY));
+    dialogWindow.style.left=left+'px';
+    dialogWindow.style.top=top+'px';
+  });
+  window.addEventListener('mouseup',()=>dragging=false);
+})();
+
+['closeModal','clearBtn'].forEach(id=>document.getElementById(id).onclick=()=>{ if(id==='clearBtn'){ toolForm.reset(); saveActiveToolForm(); } else { saveActiveToolForm(); modal.classList.remove('show'); } });
+document.getElementById('exampleBtn').onclick=()=>{const t=tools[state.activeTool]; if(t?.example) t.example(toolForm);};
+document.getElementById('insertColBtn').onclick=()=>{
+  const cols=selectedCols();
+  const firstArea=toolForm.querySelector('textarea');
+  let txt='';
+  if(state.activeTool==='discrete' && cols.length>=2){
+    const [c1,c2]=cols;
+    const lines=[];
+    for(let r=0;r<state.rows;r++){
+      const a=(getCell(r,c1)?.textContent||'').trim();
+      const b=(getCell(r,c2)?.textContent||'').trim();
+      if(!a||!b) continue;
+      const n1=Number(a), n2=Number(b);
+      if(Number.isFinite(n1)&&Number.isFinite(n2)){
+        const n1Prob=n1>=0&&n1<=1, n2Prob=n2>=0&&n2<=1;
+        if(n1Prob && !n2Prob) lines.push(`${n2} ${n1}`); // entered as P then x
+        else lines.push(`${n1} ${n2}`); // default x then P(x)
+      }else{
+        lines.push(`${a} ${b}`);
+      }
+    }
+    txt=lines.join('\n');
+  }else{
+    txt=getColRaw(cols[0]).join('\n');
+  }
+  if(firstArea){firstArea.value=(firstArea.value?firstArea.value+'\\n':'')+txt;}
+  else {const firstInput=toolForm.querySelector('input[type=\"text\"], input:not([type])'); if(firstInput) firstInput.value=txt;}
+};
+document.getElementById('computeBtn').onclick=()=>{try{tools[state.activeTool].compute(toolForm); saveActiveToolForm(); msg.innerHTML='<span class="ok">Computed successfully.</span>'; }catch(e){ msg.innerHTML=`<span class='err'>${e}</span>`; }};
+document.getElementById('normalComputeBtn').onclick=()=>{try{computeNormalInline(); saveActiveToolForm(); normalMsg.innerHTML='<span class="ok">Computed successfully.</span>'; }catch(e){ normalMsg.innerHTML=`<span class='err'>${e}</span>`; }};
+toolForm.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  if(e.target?.id==='computeBtn') return;
+  if(e.target?.tagName==='TEXTAREA' && e.shiftKey) return; // allow Shift+Enter for manual new lines
+  e.preventDefault();
+  document.getElementById('computeBtn').click();
+});
+normalForm.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('normalComputeBtn').click(); } });
+normalForm.addEventListener('change',e=>{ if(['mu','sd','mode','op','lo','hi','x'].includes(e.target.name)){ const mu=+normalForm.mu.value||0, sd=Math.max(1e-9,+normalForm.sd.value||1); if(normalForm.mode.value==='between' && normalForm.lo.value!=='' && normalForm.hi.value!==''){ const lo=+normalForm.lo.value, hi=+normalForm.hi.value; if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>lo) updateNormalGraphInline(mu,sd,lo,hi); else updateNormalGraphInline(mu,sd,mu-4*sd,mu+4*sd);} else if(normalForm.x.value!=='' && Number.isFinite(+normalForm.x.value)){ const x=+normalForm.x.value; const lo=normalForm.op.value==='<='?mu-4*sd:x, hi=normalForm.op.value==='<='?x:mu+4*sd; updateNormalGraphInline(mu,sd,lo,hi);} else updateNormalGraphInline(mu,sd,mu-4*sd,mu+4*sd); }});
+const setDataDrawer=(open)=>{
+  dataDrawer.classList.toggle('closed',!open);
+  document.getElementById('openDataBtn').textContent=open?'Data Table Open':'Open Data Table';
+};
+document.getElementById('openDataBtn').onclick=()=>setDataDrawer(dataDrawer.classList.contains('closed'));
+document.getElementById('toggleDataBtn').onclick=()=>setDataDrawer(false);
+
+// grid controls
+ document.getElementById('addRowBtn').onclick=()=>addRows(5);
+ document.getElementById('renameColBtn').onclick=()=>{const n=prompt('New column name:',state.headers[state.selectedCol]); if(n){state.headers[state.selectedCol]=n;renderGridFromData();}};
+ document.getElementById('clearColBtn').onclick=()=>{for(let r=0;r<state.rows;r++) getCell(r,state.selectedCol).textContent='';};
+ document.getElementById('sampleBtn').onclick=()=>{
+   const sample=[[1,2],[2,3.1],[3,4.7],[4,4.2],[5,6.2],[6,7.9],[7,8.1],[8,9.4],[9,9.9],[10,11.5]];
+   sample.forEach((row,r)=>row.forEach((v,c)=>getCell(r,c).textContent=v));
+   state.headers[0]='x';state.headers[1]='y';renderGridFromData();
+ };
+ document.getElementById('copyColBtn').onclick=async()=>{const txt=getCol(state.selectedCol).join('\n'); await navigator.clipboard.writeText(txt);};
+ document.getElementById('copyResultsBtn').onclick=async()=>{await navigator.clipboard.writeText(results.innerText);};
+ document.getElementById('saveDatasetBtn').onclick=()=>{const name=(document.getElementById('datasetName').value||'').trim(); if(!name) return alert('Enter a dataset name.'); const all=readDatasets(); all[name]=sheetSnapshot(); writeDatasets(all); refreshDatasetList(); document.getElementById('datasetList').value=name;};
+ document.getElementById('loadDatasetBtn').onclick=()=>{const name=document.getElementById('datasetList').value; const all=readDatasets(); if(!all[name]) return; applySnapshot(all[name]);};
+ document.getElementById('deleteDatasetBtn').onclick=()=>{const name=document.getElementById('datasetList').value; if(!name) return; const all=readDatasets(); delete all[name]; writeDatasets(all); refreshDatasetList();};
+
+ // one-click launchpad actions from selected columns
+ const runTool=(key,prep)=>{openTool(key); if(prep) prep(toolForm); document.getElementById('computeBtn').click();};
+ document.getElementById('qaSummary').onclick=()=>{const c=selectedCols()[0]; const nums=getCol(c); if(nums.length<2) return alert('Select a numeric column with at least two values.'); runTool('datasummary',f=>{f.data.value=nums.join('\n'); f.useSel.value='no';});};
+ document.getElementById('qaQual').onclick=()=>{const c=selectedCols()[0]; const vals=getColRaw(c); if(!vals.length) return alert('Select a column with data.'); runTool('qualitative',f=>{f.raw.value=vals.join('\n'); f.display.value='frequency distribution';});};
+ document.getElementById('qaPie').onclick=()=>{const c=selectedCols()[0]; const vals=getColRaw(c); if(!vals.length) return alert('Select a column with category data.'); runTool('graphpie',f=>{f.raw.value=vals.join('\n'); f.order.value='input';});};
+ document.getElementById('qaReg').onclick=()=>{const cols=selectedCols(); if(cols.length<2) return alert('Select two columns (X then Y).'); const xCol=cols[0],yCol=cols[1]; const pairs=[]; for(let r=0;r<state.rows;r++){const x=Number(getCell(r,xCol).textContent.trim()),y=Number(getCell(r,yCol).textContent.trim()); if(Number.isFinite(x)&&Number.isFinite(y)) pairs.push([x,y]);} if(pairs.length<3) return alert('Need at least three paired numeric rows.'); runTool('regression',f=>{f.pairs.value=pairs.map(p=>p.join(' ')).join('\n'); f.resid.checked=true;});};
+
+ // paste support to selected column
+ grid.addEventListener('paste',e=>{
+   const td=e.target.closest('td'); if(!td) return; e.preventDefault();
+   const startR=+td.dataset.r,c=+td.dataset.c; const rows=(e.clipboardData.getData('text')||'').split(/\r?\n/).filter(Boolean).map(r=>r.split('\t'));
+   rows.forEach((rr,i)=>rr.forEach((v,j)=>{const cell=getCell(startR+i,c+j); if(cell) cell.textContent=v;}));
+   updateColumnSummary();
+ });
+
+
+ // spreadsheet enter-key navigation
+ grid.addEventListener('keydown',e=>{
+   const td=e.target.closest('td');
+   if(!td || e.key!=='Enter') return;
+   e.preventDefault();
+   const r=+td.dataset.r, c=+td.dataset.c;
+   const next=getCell(Math.min(state.rows-1,r+1),c);
+   if(next){ next.focus(); const sel=window.getSelection(); const range=document.createRange(); range.selectNodeContents(next); range.collapse(false); sel.removeAllRanges(); sel.addRange(range);} 
+ });
+ grid.addEventListener('input',()=>updateColumnSummary());
+
+ // architecture + catalog initial card
+ addOutput({title:'Architecture Outline',tags:['Overview'],html:`<ol><li><strong>Application Header/Menu Bar:</strong> top-level app menus launch modal-based calculators.</li><li><strong>Spreadsheet Workspace:</strong> editable column-based grid with selection, rename, clear, add rows, sample import, copy/paste workflows.</li><li><strong>Output Area:</strong> polished cards for tables, formulas, interpretations, and embedded SVG charts.</li><li><strong>Shared Engine:</strong> reusable parsing, validation, rounding, and chart helper modules.</li></ol>`});
+ addOutput({title:'Calculator Catalog (Implemented)',tags:['Overview'],html:`<p>1) Qualitative Data 2) Data Summary (Quick) 3) Data Sort/Order 4) Grouped Data 5) Discrete Probability Distribution 6) Binomial 7) Poisson 8) Normal 9) One-Proportion z Test 10) CI for Proportion 11) Sample Size for Proportion 12) One-Sample t Test 13) CI for Mean 14) Sample Size for Mean 15) Simple Linear Regression 16) Scatterplot/Correlation 17) Contingency/Conditional Distribution.</p>`});
+
+ renderMenu(); initGrid(); refreshDatasetList(); updateColumnSummary();
+})();
+</script></p></body></html>
