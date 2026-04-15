@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Normal Distribution Calculator</title>
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --card: #ffffff;
+      --border: #d3dfea;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --blue: #007aff;
+      --blue-soft: #eaf3ff;
+      --shade: rgba(0, 122, 255, 0.24);
+      --danger: #c62828;
+      --shadow: 0 10px 26px rgba(26, 75, 132, 0.10);
+      --radius: 18px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    .ndc-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .ndc-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .ndc-header {
+      padding: 16px 18px;
+      background: linear-gradient(90deg, #1a4b84, #2e75b6);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .ndc-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .ndc-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      background: white;
+      color: #1a4b84;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 500;
+      flex: 0 0 auto;
+    }
+
+    .ndc-title-text h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .ndc-title-text div {
+      margin-top: 2px;
+      font-size: 0.9rem;
+      opacity: 0.92;
+    }
+
+    .ndc-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .ndc-modebar,
+    .ndc-subbar,
+    .ndc-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ndc-btn {
+      appearance: none;
+      border: 1.5px solid var(--border);
+      background: white;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.96rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .ndc-btn.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+      box-shadow: 0 8px 18px rgba(0, 122, 255, 0.24);
+    }
+
+    .ndc-graph-panel {
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fbfdff, #f7fbff);
+      padding: 10px 10px 6px 10px;
+    }
+
+    .ndc-graph {
+      width: 100%;
+      height: auto;
+      display: block;
+      max-height: 300px;
+    }
+
+    .ndc-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .ndc-field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .ndc-field label {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .ndc-input,
+    .ndc-output,
+    .ndc-select,
+    .ndc-inline-box,
+    .ndc-inline-select {
+      width: 100%;
+      min-width: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      color: var(--text);
+      background: white;
+      outline: none;
+    }
+
+    .ndc-inline-box,
+    .ndc-inline-select {
+      width: 150px;
+      min-height: 42px;
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+
+    .ndc-inline-select {
+      width: 74px;
+      text-align: center;
+    }
+
+    .ndc-input:focus,
+    .ndc-select:focus,
+    .ndc-inline-box:focus,
+    .ndc-inline-select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+    }
+
+    .ndc-output,
+    .ndc-inline-box.output {
+      background: var(--blue-soft);
+    }
+
+    .ndc-formula {
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      background: #fbfdff;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .ndc-formula-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .ndc-primary,
+    .ndc-secondary {
+      appearance: none;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-size: 0.98rem;
+      cursor: pointer;
+    }
+
+    .ndc-primary {
+      border: 1px solid var(--blue);
+      background: var(--blue);
+      color: white;
+      box-shadow: 0 10px 20px rgba(0,122,255,0.20);
+    }
+
+    .ndc-secondary {
+      border: 1.5px solid var(--border);
+      background: white;
+      color: var(--text);
+    }
+
+    .ndc-message {
+      min-height: 22px;
+      font-size: 0.93rem;
+      color: var(--muted);
+    }
+
+    .ndc-message.error { color: var(--danger); }
+
+    .ndc-help {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 680px) {
+      body { padding: 10px; }
+      .ndc-body { padding: 12px; }
+      .ndc-grid { grid-template-columns: 1fr; }
+      .ndc-inline-box { width: 130px; flex: 1 1 120px; }
+      .ndc-inline-select { width: 70px; }
+    }
+  </style>
+</head><body><div class="ndc-wrap">
+<div class="ndc-card" id="normalCalc">
+<div class="ndc-header">
+<div class="ndc-title">
+<div class="ndc-icon">Σ</div>
+<div class="ndc-title-text">
+<h1>Normal Distribution Calculator</h1>
+<div>Single responsive calculator for Brightspace</div>
+</div>
+</div>
+</div>
+<div class="ndc-body">
+<div class="ndc-modebar"><button class="ndc-btn active" data-main-mode="standard" type="button">Standard</button> <button class="ndc-btn" data-main-mode="between" type="button">Between</button></div>
+<div class="ndc-graph-panel"><svg xmlns="http://www.w3.org/2000/svg" id="ndcSvg" class="ndc-graph" viewBox="0 0 760 260" aria-label="Normal distribution graph"></svg></div>
+<div class="ndc-grid">
+<div class="ndc-field"><label for="meanInput">Mean</label> <input id="meanInput" class="ndc-input" type="number" step="any" value="0"></div>
+<div class="ndc-field"><label for="sdInput">Standard deviation</label> <input id="sdInput" class="ndc-input" type="number" step="any" value="1"></div>
+</div>
+<div id="standardPanel">
+<div class="ndc-formula" id="standardUnifiedRow">
+<div class="ndc-formula-line"><span>P(X</span><select id="comparisonInlineSelect" class="ndc-inline-select" aria-label="Inequality sign">
+<option value="le">≤</option>
+<option value="ge">≥</option>
+</select><input id="stdXInput" class="ndc-inline-box" type="number" step="any" value="0" aria-label="x-value"> <span>) =</span> <input id="stdProbInput" class="ndc-inline-box output" type="number" step="any" value="0.50000000" aria-label="probability"></div>
+<div class="ndc-help">Edit either box, then press Compute or Enter. If you change x, the calculator finds the probability. If you change the probability, the calculator solves for x.</div>
+</div>
+</div>
+<div id="betweenPanel" class="hidden">
+<div class="ndc-subbar" id="betweenSubbar"><button class="ndc-btn active" data-between-submode="findProbability" type="button">Find Probability</button> <button class="ndc-btn" data-between-submode="findBounds" type="button">Find Bounds</button></div>
+<div class="ndc-formula" id="betweenProbabilityRow">
+<div class="ndc-formula-line"><span>P(</span> <input id="betweenLowerInput" class="ndc-inline-box" type="number" step="any" value="-1"> <span>≤ X ≤</span> <input id="betweenUpperInput" class="ndc-inline-box" type="number" step="any" value="1"> <span>) =</span> <input id="betweenProbOutput" class="ndc-inline-box output" type="text" value="0.68268949" readonly="readonly"></div>
+</div>
+<div class="ndc-formula hidden" id="betweenInverseRow">
+<div class="ndc-formula-line"><span>Middle probability =</span> <input id="betweenProbInput" class="ndc-inline-box" type="number" step="any" value="0.68268949"></div>
+<div class="ndc-formula-line"><span>Lower bound =</span> <input id="betweenLowerOutput" class="ndc-inline-box output" type="text" value="-1.0000" readonly="readonly"> <span>Upper bound =</span> <input id="betweenUpperOutput" class="ndc-inline-box output" type="text" value="1.0000" readonly="readonly"></div>
+</div>
+</div>
+<div class="ndc-actions"><button id="computeBtn" class="ndc-primary" type="button">Compute</button> <button id="resetBtn" class="ndc-secondary" type="button">Reset</button></div>
+<div id="message" class="ndc-message" aria-live="polite"></div>
+<div class="ndc-help">Tip: Press Enter in any input box to compute. The graph updates with the active mode and shaded region.</div>
+</div>
+</div>
+</div>
+<p><script>
+    (function () {
+      const state = {
+        mainMode: 'standard',
+        standardActiveField: 'x',
+        betweenSubmode: 'findProbability'
+      };
+
+      const el = {
+        svg: document.getElementById('ndcSvg'),
+        mean: document.getElementById('meanInput'),
+        sd: document.getElementById('sdInput'),
+        message: document.getElementById('message'),
+        comparisonInline: document.getElementById('comparisonInlineSelect'),
+        standardPanel: document.getElementById('standardPanel'),
+        betweenPanel: document.getElementById('betweenPanel'),
+        stdXInput: document.getElementById('stdXInput'),
+        stdProbInput: document.getElementById('stdProbInput'),
+        betweenProbabilityRow: document.getElementById('betweenProbabilityRow'),
+        betweenInverseRow: document.getElementById('betweenInverseRow'),
+        betweenLowerInput: document.getElementById('betweenLowerInput'),
+        betweenUpperInput: document.getElementById('betweenUpperInput'),
+        betweenProbOutput: document.getElementById('betweenProbOutput'),
+        betweenProbInput: document.getElementById('betweenProbInput'),
+        betweenLowerOutput: document.getElementById('betweenLowerOutput'),
+        betweenUpperOutput: document.getElementById('betweenUpperOutput'),
+        computeBtn: document.getElementById('computeBtn'),
+        resetBtn: document.getElementById('resetBtn')
+      };
+
+      function setMessage(text, isError) {
+        el.message.textContent = text || '';
+        el.message.className = isError ? 'ndc-message error' : 'ndc-message';
+      }
+
+      function formatProbability(value) {
+        return Number(value).toFixed(8);
+      }
+
+      function formatX(value) {
+        return Number(value).toFixed(4);
+      }
+
+      function parseNum(inputEl) {
+        return Number(inputEl.value);
+      }
+
+      function erf(x) {
+        const sign = x < 0 ? -1 : 1;
+        x = Math.abs(x);
+        const a1 = 0.254829592;
+        const a2 = -0.284496736;
+        const a3 = 1.421413741;
+        const a4 = -1.453152027;
+        const a5 = 1.061405429;
+        const p = 0.3275911;
+        const t = 1 / (1 + p * x);
+        const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+        return sign * y;
+      }
+
+      function normalPdf(x, mean, sd) {
+        const z = (x - mean) / sd;
+        return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+      }
+
+      function normalCdf(x, mean, sd) {
+        return 0.5 * (1 + erf((x - mean) / (sd * Math.sqrt(2))));
+      }
+
+      function invNorm(p) {
+        if (p <= 0 || p >= 1) {
+          throw new Error('Probability must be between 0 and 1.');
+        }
+        const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+        const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+        const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+        const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+        const plow = 0.02425;
+        const phigh = 1 - plow;
+        let q, r;
+        if (p < plow) {
+          q = Math.sqrt(-2 * Math.log(p));
+          return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+                 ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+        }
+        if (p > phigh) {
+          q = Math.sqrt(-2 * Math.log(1 - p));
+          return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+                   ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+        }
+        q = p - 0.5;
+        r = q * q;
+        return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+               (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+      }
+
+      function invNormalCdf(p, mean, sd) {
+        return mean + sd * invNorm(p);
+      }
+
+      function validateMeanSd(mean, sd) {
+        if (!Number.isFinite(mean) || !Number.isFinite(sd)) {
+          throw new Error('Mean and standard deviation must be valid numbers.');
+        }
+        if (sd <= 0) {
+          throw new Error('Standard deviation must be greater than 0.');
+        }
+      }
+
+      function updateModeUI() {
+        document.querySelectorAll('[data-main-mode]').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-main-mode') === state.mainMode);
+        });
+        document.querySelectorAll('[data-between-submode]').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-between-submode') === state.betweenSubmode);
+        });
+        el.standardPanel.classList.toggle('hidden', state.mainMode !== 'standard');
+        el.betweenPanel.classList.toggle('hidden', state.mainMode !== 'between');
+        el.betweenProbabilityRow.classList.toggle('hidden', state.betweenSubmode !== 'findProbability');
+        el.betweenInverseRow.classList.toggle('hidden', state.betweenSubmode !== 'findBounds');
+      }
+
+      function compute() {
+        try {
+          setMessage('');
+          const mean = parseNum(el.mean);
+          const sd = parseNum(el.sd);
+          validateMeanSd(mean, sd);
+
+          if (state.mainMode === 'standard') {
+            const isLE = el.comparisonInline.value === 'le';
+            const x = parseNum(el.stdXInput);
+            const p = parseNum(el.stdProbInput);
+
+            if (state.standardActiveField === 'x') {
+              if (!Number.isFinite(x)) throw new Error('Please enter a valid x-value.');
+              const leftProb = normalCdf(x, mean, sd);
+              const prob = isLE ? leftProb : 1 - leftProb;
+              el.stdProbInput.value = formatProbability(prob);
+            } else {
+              if (!Number.isFinite(p) || p <= 0 || p >= 1) {
+                throw new Error('Probability must be between 0 and 1.');
+              }
+              const targetP = isLE ? p : 1 - p;
+              el.stdXInput.value = formatX(invNormalCdf(targetP, mean, sd));
+              el.stdProbInput.value = formatProbability(p);
+            }
+          } else {
+            if (state.betweenSubmode === 'findProbability') {
+              const lower = parseNum(el.betweenLowerInput);
+              const upper = parseNum(el.betweenUpperInput);
+              if (!Number.isFinite(lower) || !Number.isFinite(upper)) throw new Error('Please enter valid lower and upper bounds.');
+              if (lower >= upper) throw new Error('Lower bound must be less than upper bound.');
+              el.betweenProbOutput.value = formatProbability(normalCdf(upper, mean, sd) - normalCdf(lower, mean, sd));
+            } else {
+              const p = parseNum(el.betweenProbInput);
+              if (!Number.isFinite(p) || p <= 0 || p >= 1) throw new Error('Middle probability must be between 0 and 1.');
+              const tail = (1 - p) / 2;
+              el.betweenLowerOutput.value = formatX(invNormalCdf(tail, mean, sd));
+              el.betweenUpperOutput.value = formatX(invNormalCdf(1 - tail, mean, sd));
+            }
+          }
+
+          drawGraph();
+        } catch (err) {
+          setMessage(err.message || 'An error occurred.', true);
+        }
+      }
+
+      function resetDefaults() {
+        el.mean.value = '0';
+        el.sd.value = '1';
+        if (state.mainMode === 'standard') {
+          state.standardActiveField = 'x';
+          el.comparisonInline.value = 'le';
+          el.stdXInput.value = '0';
+          el.stdProbInput.value = '0.50000000';
+        } else {
+          state.betweenSubmode = 'findProbability';
+          el.betweenLowerInput.value = '-1';
+          el.betweenUpperInput.value = '1';
+          el.betweenProbOutput.value = '0.68268949';
+          el.betweenProbInput.value = '0.68268949';
+          el.betweenLowerOutput.value = '-1.0000';
+          el.betweenUpperOutput.value = '1.0000';
+        }
+        updateModeUI();
+        setMessage('');
+        compute();
+      }
+
+      function getGraphContext() {
+        const mean = parseNum(el.mean);
+        const sd = parseNum(el.sd);
+        validateMeanSd(mean, sd);
+
+        let shadeType = 'none';
+        let cutA = null;
+        let cutB = null;
+
+        if (state.mainMode === 'standard') {
+          const isLE = el.comparisonInline.value === 'le';
+          if (state.standardActiveField === 'x') {
+            cutA = parseNum(el.stdXInput);
+            if (!Number.isFinite(cutA)) throw new Error('Please enter a valid x-value.');
+          } else {
+            const p = parseNum(el.stdProbInput);
+            if (!Number.isFinite(p) || p <= 0 || p >= 1) throw new Error('Probability must be between 0 and 1.');
+            cutA = invNormalCdf(isLE ? p : 1 - p, mean, sd);
+          }
+          shadeType = isLE ? 'left' : 'right';
+        } else {
+          if (state.betweenSubmode === 'findProbability') {
+            cutA = parseNum(el.betweenLowerInput);
+            cutB = parseNum(el.betweenUpperInput);
+            if (!Number.isFinite(cutA) || !Number.isFinite(cutB)) throw new Error('Please enter valid bounds.');
+            if (cutA >= cutB) throw new Error('Lower bound must be less than upper bound.');
+          } else {
+            const p = parseNum(el.betweenProbInput);
+            if (!Number.isFinite(p) || p <= 0 || p >= 1) throw new Error('Middle probability must be between 0 and 1.');
+            const tail = (1 - p) / 2;
+            cutA = invNormalCdf(tail, mean, sd);
+            cutB = invNormalCdf(1 - tail, mean, sd);
+          }
+          shadeType = 'between';
+        }
+
+        return { mean, sd, shadeType, cutA, cutB };
+      }
+
+      function trimNum(n) {
+        const rounded = Math.round(n * 1000) / 1000;
+        return String(rounded).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+      }
+
+      function drawGraph() {
+        try {
+          const { mean, sd, shadeType, cutA, cutB } = getGraphContext();
+          const width = 760;
+          const height = 260;
+          const m = { top: 12, right: 18, bottom: 42, left: 18 };
+          const plotW = width - m.left - m.right;
+          const plotH = height - m.top - m.bottom;
+          const baselineY = m.top + plotH;
+          const maxPdf = normalPdf(mean, mean, sd);
+          const minX = mean - 4 * sd;
+          const maxX = mean + 4 * sd;
+          const xToPx = x => m.left + ((x - minX) / (maxX - minX)) * plotW;
+          const yToPx = y => m.top + plotH - (y / maxPdf) * (plotH * 0.9);
+
+          const points = [];
+          for (let i = 0; i <= 320; i++) {
+            const x = minX + (i / 320) * (maxX - minX);
+            points.push([xToPx(x), yToPx(normalPdf(x, mean, sd))]);
+          }
+
+          let curvePath = `M ${points[0][0]} ${points[0][1]}`;
+          for (let i = 1; i < points.length; i++) curvePath += ` L ${points[i][0]} ${points[i][1]}`;
+
+          let shadePath = '';
+          let leftBound = minX;
+          let rightBound = maxX;
+          if (shadeType === 'left') rightBound = cutA;
+          if (shadeType === 'right') leftBound = cutA;
+          if (shadeType === 'between') { leftBound = cutA; rightBound = cutB; }
+
+          if (shadeType !== 'none') {
+            const shadePts = [[xToPx(leftBound), baselineY]];
+            for (let i = 0; i <= 220; i++) {
+              const x = leftBound + (i / 220) * (rightBound - leftBound);
+              shadePts.push([xToPx(x), yToPx(normalPdf(x, mean, sd))]);
+            }
+            shadePts.push([xToPx(rightBound), baselineY]);
+            shadePath = `M ${shadePts[0][0]} ${shadePts[0][1]}`;
+            for (let i = 1; i < shadePts.length; i++) shadePath += ` L ${shadePts[i][0]} ${shadePts[i][1]}`;
+            shadePath += ' Z';
+          }
+
+          const ticks = [];
+          for (let k = -3; k <= 3; k++) ticks.push(mean + k * sd);
+          const cutoffLines = [];
+          if (Number.isFinite(cutA)) cutoffLines.push(cutA);
+          if (Number.isFinite(cutB)) cutoffLines.push(cutB);
+
+          el.svg.innerHTML = `
+            <line x1="${m.left}" y1="${baselineY}" x2="${width - m.right}" y2="${baselineY}" stroke="#9aa9bb" stroke-width="1.5" />
+            ${ticks.map(val => {
+              const x = xToPx(val);
+              return `<line x1="${x}" y1="${baselineY}" x2="${x}" y2="${baselineY + 6}" stroke="#8da1b6" stroke-width="1.2" />
+              <text x="${x}" y="${baselineY + 22}" text-anchor="middle" font-size="12" fill="#556476">${trimNum(val)}</text>`;
+            }).join('')}
+            ${shadePath ? `<path d="${shadePath}" fill="rgba(0, 122, 255, 0.24)"></path>` : ''}
+            <path d="${curvePath}" fill="none" stroke="#007aff" stroke-width="3"></path>
+            ${cutoffLines.map(val => {
+              const x = xToPx(val);
+              return `<line x1="${x}" y1="${baselineY}" x2="${x}" y2="${m.top + 12}" stroke="#1a4b84" stroke-width="1.5" stroke-dasharray="5 4" />
+              <text x="${x}" y="${m.top + 10}" text-anchor="middle" font-size="12" fill="#1a4b84">${trimNum(val)}</text>`;
+            }).join('')}
+          `;
+        } catch {
+          el.svg.innerHTML = '';
+        }
+      }
+
+      document.querySelectorAll('[data-main-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.mainMode = btn.getAttribute('data-main-mode');
+          updateModeUI();
+          compute();
+        });
+      });
+
+      document.querySelectorAll('[data-between-submode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.betweenSubmode = btn.getAttribute('data-between-submode');
+          updateModeUI();
+          compute();
+        });
+      });
+
+      [el.stdXInput, el.stdProbInput].forEach(node => {
+        node.addEventListener('focus', () => {
+          state.standardActiveField = node === el.stdXInput ? 'x' : 'p';
+        });
+        node.addEventListener('input', () => {
+          state.standardActiveField = node === el.stdXInput ? 'x' : 'p';
+          drawGraph();
+        });
+      });
+
+      [el.mean, el.sd, el.comparisonInline, el.betweenLowerInput, el.betweenUpperInput, el.betweenProbInput].forEach(node => {
+        node.addEventListener('input', drawGraph);
+      });
+
+      [el.mean, el.sd, el.comparisonInline, el.stdXInput, el.stdProbInput, el.betweenLowerInput, el.betweenUpperInput, el.betweenProbInput].forEach(node => {
+        node.addEventListener('keydown', evt => {
+          if (evt.key === 'Enter') {
+            evt.preventDefault();
+            compute();
+          }
+        });
+      });
+
+      el.computeBtn.addEventListener('click', compute);
+      el.resetBtn.addEventListener('click', resetDefaults);
+
+      updateModeUI();
+      compute();
+    })();
+  </script></p></body></html>
